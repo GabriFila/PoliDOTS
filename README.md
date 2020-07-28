@@ -11,3 +11,5 @@ A project from Politecnico di Torino to test Unity DOTS
 - [Code monkey](https://www.youtube.com/channel/UCFK6NCbuCIVzA6Yj1G_ZqCg) - youtube channel with Unity tutorials
 - [Unity ECS Code Sample](https://github.com/Unity-Technologies/EntityComponentSystemSamples)
 - [C# Review](https://www.youtube.com/playlist?list=PLzDRvYVwl53t2GGC4rV_AmH7vSvSqjVmz)
+- [DOTS Samples](https://github.com/Unity-Technologies/DOTSSample)
+- [DOTS Training Samples](https://github.com/Unity-Technologies/DOTS-training-samples)
