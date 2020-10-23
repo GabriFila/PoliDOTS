@@ -1,16 +1,13 @@
 ﻿using Unity.Entities;
-using UnityEngine;
-using Unity.Transforms;
-using Unity.Rendering;
 using Unity.Mathematics;
-using UnityEngine.Serialization;
-using UnityEngine.AI;
+using Unity.Rendering;
+using Unity.Transforms;
+using UnityEngine;
 
 public class Spawner : MonoBehaviour
 {
     [SerializeField] private Mesh unitMesh;
     [SerializeField] private Material unitMaterial;
-    [SerializeField] private 
 
     private void Start()
     {
