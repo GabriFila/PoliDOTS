@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.44657898, g: 0.4964133, b: 0.5748178, a: 1}
+  m_IndirectSpecularColor: {r: 0.44657826, g: 0.49641263, b: 0.57481676, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -1176,7 +1176,7 @@ GameObject:
   - component: {fileID: 336284456}
   - component: {fileID: 336284455}
   m_Layer: 0
-  m_Name: GameController
+  m_Name: Spawner
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1194,12 +1194,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f9381c72b2780547a4da979430bc8e6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  entX: 100
-  entZ: 100
+  entX: 1
+  entZ: 1
   unitMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
   unitMaterial: {fileID: 2100000, guid: 516e6b06e20bb974aa29ea7459753cbe, type: 2}
   surface: {fileID: 1803466018}
-  agent: {fileID: 1112826213}
 --- !u!4 &336284456
 Transform:
   m_ObjectHideFlags: 0
@@ -1680,7 +1679,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 906444435}
   m_LocalRotation: {x: 0.27781588, y: 0.36497167, z: -0.1150751, w: 0.8811196}
-  m_LocalPosition: {x: -11.55, y: 10.92, z: -11.55}
+  m_LocalPosition: {x: -38.9, y: 20.59, z: -12.98}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -2085,7 +2084,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!23 &1112826209
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -2157,7 +2156,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1112826208}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -17.73, y: 1.5, z: 0.13}
+  m_LocalPosition: {x: -17.92, y: 1.5, z: -1.03}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -2173,8 +2172,8 @@ NavMeshAgent:
   m_Enabled: 1
   m_AgentTypeID: 0
   m_Radius: 0.5000001
-  m_Speed: 15.15
-  m_Acceleration: 8.72
+  m_Speed: 3.5
+  m_Acceleration: 8
   avoidancePriority: 50
   m_AngularSpeed: 120
   m_StoppingDistance: 0
@@ -3510,7 +3509,7 @@ MonoBehaviour:
   m_OverrideVoxelSize: 0
   m_VoxelSize: 0.16666667
   m_BuildHeightMesh: 0
-  m_NavMeshData: {fileID: 23800000, guid: b6243c84a515c54469b4ffa09c46a358, type: 2}
+  m_NavMeshData: {fileID: 0}
 --- !u!4 &1803466019
 Transform:
   m_ObjectHideFlags: 0
