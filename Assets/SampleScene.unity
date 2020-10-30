@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.44657826, g: 0.49641263, b: 0.57481676, a: 1}
+  m_IndirectSpecularColor: {r: 0.44657898, g: 0.4964133, b: 0.5748178, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -1194,11 +1194,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f9381c72b2780547a4da979430bc8e6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  entX: 1
-  entZ: 1
-  unitMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
-  unitMaterial: {fileID: 2100000, guid: 516e6b06e20bb974aa29ea7459753cbe, type: 2}
   surface: {fileID: 1803466018}
+  playerPrefab: {fileID: 2124082002260476599, guid: 64365a47742b1c949b84534913e73ef3,
+    type: 3}
+  totUnits: 200
 --- !u!4 &336284456
 Transform:
   m_ObjectHideFlags: 0
@@ -1655,7 +1654,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 12.1
+  orthographic size: 21.358635
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -1678,13 +1677,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 906444435}
-  m_LocalRotation: {x: 0.27781588, y: 0.36497167, z: -0.1150751, w: 0.8811196}
+  m_LocalRotation: {x: 0.13552065, y: 0.3540259, z: -0.058973156, w: 0.9234836}
   m_LocalPosition: {x: -38.9, y: 20.59, z: -12.98}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 35, y: 45.000004, z: 0}
+  m_LocalEulerAnglesHint: {x: 16.981, y: 41.834, z: -0.777}
 --- !u!1 &976391456
 GameObject:
   m_ObjectHideFlags: 0
@@ -3509,7 +3508,7 @@ MonoBehaviour:
   m_OverrideVoxelSize: 0
   m_VoxelSize: 0.16666667
   m_BuildHeightMesh: 0
-  m_NavMeshData: {fileID: 0}
+  m_NavMeshData: {fileID: 23800000, guid: 5ec3eb440b653d742804c772b1b7eb5a, type: 2}
 --- !u!4 &1803466019
 Transform:
   m_ObjectHideFlags: 0

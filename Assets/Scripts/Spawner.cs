@@ -1,9 +1,4 @@
-﻿using Unity.Collections;
-using Unity.Entities;
-using Unity.Mathematics;
-using Unity.Rendering;
-using Unity.Transforms;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.AI;
 
 public class Spawner : MonoBehaviour
@@ -14,6 +9,7 @@ public class Spawner : MonoBehaviour
     //[SerializeField] private Material unitMaterial;
     [SerializeField] public NavMeshSurface surface;
     [SerializeField] public GameObject playerPrefab;
+    [SerializeField] public int totUnits;
     private NavMeshAgent myAgent;
 
     //public NavMeshAgent agent;
@@ -50,10 +46,16 @@ public class Spawner : MonoBehaviour
 
     private void MakeEntity()
     {
-
-        GameObject room = GameObject.Find("Aula3");
-
-        for (int i = 0; i < 5; i++)
+        var rand = new System.Random();
+        GameObject room3 = GameObject.Find("Aula3");
+        GameObject room7 = GameObject.Find("Aula7");
+        GameObject room8 = GameObject.Find("Aula8");
+        GameObject room4 = GameObject.Find("Aula4");
+        GameObject room5 = GameObject.Find("Aula5");
+        GameObject room6 = GameObject.Find("Aula6");
+        GameObject roomM = GameObject.Find("AulaMagna");
+        Vector3[] targets = { room3.transform.position, room7.transform.position, room5.transform.position, room6.transform.position, roomM.transform.position, room8.transform.position, room4.transform.position };
+        for (int i = 0; i < totUnits; i++)
         {
 
             Vector3 pos = new Vector3(UnityEngine.Random.Range(-10f, 10f), 1.5f, UnityEngine.Random.Range(-1f, 1f));
@@ -61,7 +63,8 @@ public class Spawner : MonoBehaviour
             var obj = Instantiate(playerPrefab, pos, rot) as GameObject;
 
             myAgent = obj.GetComponent<NavMeshAgent>();
-            myAgent.destination = room.transform.position;
+            //myAgent.destination = room3.transform.position;
+            myAgent.destination = targets[rand.Next(targets.Length)];
         }
 
         /*EntityManager entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
