@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Linq;
+using UnityEngine;
 using UnityEngine.AI;
 
 public class Spawner : MonoBehaviour
@@ -10,21 +11,41 @@ public class Spawner : MonoBehaviour
     [SerializeField] public NavMeshSurface surface;
     [SerializeField] public GameObject playerPrefab;
     [SerializeField] public int totUnits;
-    private NavMeshAgent myAgent;
 
     //public NavMeshAgent agent;
 
     private void Start()
     {
-
-        surface.BuildNavMesh();
-        MakeEntity();
-
-        /*GameObject room = GameObject.Find("Aula3");
-        Debug.Log(room.transform.position);
-        agent.destination = new Vector3(room.transform.position.x, 0, room.transform.position.z);*/
+        MakePlayers();
+        //MakeEntity();
     }
 
+    private void MakePlayers()
+    {
+        var rand = new System.Random();
+        GameObject[] rooms = new GameObject[] {
+            GameObject.Find("Aula2"),
+            GameObject.Find("Aula3"),
+            GameObject.Find("Aula4"),
+            GameObject.Find("Aula5"),
+            GameObject.Find("Aula6"),
+            GameObject.Find("Aula7"),
+            GameObject.Find("AulaMagna"),
+        };
+        Vector3[] targets = rooms.Select(room => room.transform.position).ToArray();
+
+
+        for (int i = 0; i < totUnits; i++)
+        {
+
+            Vector3 pos = new Vector3(UnityEngine.Random.Range(-20f, 5f), 1.5f, UnityEngine.Random.Range(-20f, 20f));
+            Quaternion rot = Quaternion.Euler(0f, 0f, 0f);
+            var obj = Instantiate(playerPrefab, pos, rot) as GameObject;
+
+            NavMeshAgent navMeshAgent = obj.GetComponent<NavMeshAgent>();
+            navMeshAgent.destination = targets[rand.Next(targets.Length)];
+        }
+    }
 
     private void Update()
     {
@@ -43,29 +64,9 @@ public class Spawner : MonoBehaviour
         */
     }
 
-
     private void MakeEntity()
     {
-        var rand = new System.Random();
-        GameObject room3 = GameObject.Find("Aula3");
-        GameObject room7 = GameObject.Find("Aula7");
-        GameObject room8 = GameObject.Find("Aula8");
-        GameObject room4 = GameObject.Find("Aula4");
-        GameObject room5 = GameObject.Find("Aula5");
-        GameObject room6 = GameObject.Find("Aula6");
-        GameObject roomM = GameObject.Find("AulaMagna");
-        Vector3[] targets = { room3.transform.position, room7.transform.position, room5.transform.position, room6.transform.position, roomM.transform.position, room8.transform.position, room4.transform.position };
-        for (int i = 0; i < totUnits; i++)
-        {
 
-            Vector3 pos = new Vector3(UnityEngine.Random.Range(-10f, 10f), 1.5f, UnityEngine.Random.Range(-1f, 1f));
-            Quaternion rot = Quaternion.Euler(0f, 0f, 0f);
-            var obj = Instantiate(playerPrefab, pos, rot) as GameObject;
-
-            myAgent = obj.GetComponent<NavMeshAgent>();
-            //myAgent.destination = room3.transform.position;
-            myAgent.destination = targets[rand.Next(targets.Length)];
-        }
 
         /*EntityManager entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
 
