@@ -7,6 +7,9 @@ using UnityEngine.Experimental.AI;
 using System.Collections.Generic;
 using Unity.Transforms;
 using Unity.Collections.LowLevel.Unsafe;
+using UnityEngine.AI;
+using System.Diagnostics;
+using UnityEngine;
 
 public class Unit_System : SystemBase
 {
@@ -20,6 +23,8 @@ public class Unit_System : SystemBase
     private NavMeshWorld navMeshWorld;
     private List<JobHandle> jobHandles;
 
+    BeginInitializationEntityCommandBufferSystem bi_ECB;
+
     //----------- Collision Avoidance Code -----------------
     public static NativeMultiHashMap<int, float3> cellVsEntityPositions;
     public static int totalCollisions;
@@ -28,7 +33,9 @@ public class Unit_System : SystemBase
 
     protected override void OnCreate()
     {
-        extents = new float3(10, 10, 10);
+        bi_ECB = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
+
+        extents = new float3(200, 200, 200);
         allPaths = new Dictionary<int, float3[]>();
         statusOutputs = new List<NativeArray<int>>();
         results = new List<NativeArray<float3>>();
@@ -36,7 +43,7 @@ public class Unit_System : SystemBase
         queries = new List<NavMeshQuery>();
         jobHandles = new List<JobHandle>();
 
-        for (int n = 0; n <= 32; n++)
+        for (int n = 0; n <= 10000; n++)
         {
             NativeArray<float3> result = new NativeArray<float3>(1024, Allocator.Persistent);
             NativeArray<int> statusOutput = new NativeArray<int>(3, Allocator.Persistent);
@@ -60,12 +67,26 @@ public class Unit_System : SystemBase
 
     protected override void OnUpdate()
     {
+        var ecb = bi_ECB.CreateCommandBuffer();
+
         float deltaTime = Time.DeltaTime;
         int i = 0;
-        
+
+        /*float3[] myValue;
+
+        UnityEngine.Debug.Log("Start");
+
+        foreach (int myKey in allPaths.Keys) {
+            UnityEngine.Debug.Log("Key: " + myKey);
+            allPaths.TryGetValue(myKey, out myValue);
+            UnityEngine.Debug.Log("First way point " + myValue[0]);
+        }
+
+        UnityEngine.Debug.Log("End");*/
+
         Entities.
-            WithNone<Unit_Routed>().
-            WithoutBurst().
+            //WithNone<Unit_Routed>().
+            WithBurst(synchronousCompilation: true).
             WithStructuralChanges().
             ForEach((Entity e, ref Unit_Component uc, ref DynamicBuffer<Unit_Buffer> ub) =>
             {
@@ -75,6 +96,7 @@ public class Unit_System : SystemBase
                     int toKey = ((int)uc.toLocation.x + (int)uc.toLocation.y + (int)uc.toLocation.z) * UnitManager.instance.maxPathSize;
                     int key = fromKey + toKey;
                     //Cached path
+
                     if (UnitManager.instance.useCache && allPaths.ContainsKey(key) && !uc.routed)
                     {
                         allPaths.TryGetValue(key, out float3[] cachedPath);
@@ -82,13 +104,14 @@ public class Unit_System : SystemBase
                         {
                             ub.Add(new Unit_Buffer { wayPoints = cachedPath[h] });
                         }
+                        // copia gli elementi direttamente
                         uc.routed = true;
                         uc.usingCachedPath = true;
                         EntityManager.AddComponent<Unit_Routed>(e);
                         return;
                     }
                     //Job
-                    else if (!uc.routed)
+                    if (!uc.routed)
                     {
                         NavMeshQuery currentQuery = new NavMeshQuery(navMeshWorld, Allocator.Persistent, UnitManager.instance.maxPathNodePoolSize);
                         SinglePathFindingJob spfj = new SinglePathFindingJob()
@@ -167,20 +190,58 @@ public class Unit_System : SystemBase
 
         NativeMultiHashMap<int, float3>.ParallelWriter cellVsEntityPositionsParallel = cellVsEntityPositions.AsParallelWriter();
         Entities
+            .WithBurst(synchronousCompilation: true)
             .ForEach((ref Unit_Component uc, ref Translation trans) =>
             {
-                cellVsEntityPositionsParallel.Add(GetUniqueKeyForPosition(trans.Value, 25), trans.Value);
-            }).Run();
+                cellVsEntityPositionsParallel.Add(GetUniqueKeyForPosition(trans.Value, 15), trans.Value);
+            }).ScheduleParallel();
 
+        /*
         NativeMultiHashMap<int, float3> cellVsEntityPositionsForJob = cellVsEntityPositions;
         Entities
             .WithReadOnly(cellVsEntityPositionsForJob)
             .ForEach((ref Unit_Component uc, ref Translation trans) =>
             {
-                int key = GetUniqueKeyForPosition(trans.Value, 25);
+                int key = GetUniqueKeyForPosition(trans.Value, 15);
                 NativeMultiHashMapIterator<int> nmhKeyIterator;
                 float3 currentLocationToCheck;
-                float currentDistance = 1.5f;
+                float distanceThreshold = 0.5f;
+                float currentDistance;
+                int total = 0;
+                uc.avoidanceDirection = float3.zero;
+                if (cellVsEntityPositionsForJob.TryGetFirstValue(key, out currentLocationToCheck, out nmhKeyIterator))
+                {
+                    do
+                    {
+                        if (!trans.Value.Equals(currentLocationToCheck))
+                        {
+                            currentDistance = math.sqrt(math.lengthsq(trans.Value - currentLocationToCheck));
+                            if (currentDistance < distanceThreshold)
+                            {
+                                float3 distanceFromTo = trans.Value - currentLocationToCheck;
+                                uc.avoidanceDirection = uc.avoidanceDirection + math.normalize(distanceFromTo / currentDistance);
+                                total++;
+                            }
+                        }
+                    } while (cellVsEntityPositionsForJob.TryGetNextValue(out currentLocationToCheck, ref nmhKeyIterator));
+                    if (total > 0)
+                    {
+                        uc.avoidanceDirection = uc.avoidanceDirection / total;
+                    }
+                }
+            }).ScheduleParallel();
+        */
+
+        NativeMultiHashMap<int, float3> cellVsEntityPositionsForJob = cellVsEntityPositions;
+        Entities
+            .WithBurst(synchronousCompilation: true)
+            .WithReadOnly(cellVsEntityPositionsForJob)
+            .ForEach((ref Unit_Component uc, ref Translation trans) =>
+            {
+                int key = GetUniqueKeyForPosition(trans.Value, 15);
+                NativeMultiHashMapIterator<int> nmhKeyIterator;
+                float3 currentLocationToCheck;
+                float currentDistance = 0.3f;
                 int total = 0;
                 uc.avoidanceDirection = float3.zero;
                 if (cellVsEntityPositionsForJob.TryGetFirstValue(key, out currentLocationToCheck, out nmhKeyIterator))
@@ -203,38 +264,92 @@ public class Unit_System : SystemBase
                         uc.avoidanceDirection = uc.avoidanceDirection / total;
                     }
                 }
-            }).Run();
+            }).ScheduleParallel();
 
         //----------- Collision Avoidance Code -----------------
 
+
         //Movement
         Entities
-            .WithAll<Unit_Routed>().ForEach((ref Unit_Component uc, ref DynamicBuffer<Unit_Buffer> ub, ref Translation trans) =>
-            {
-                if (ub.Length > 0 && uc.routed)
-                {
-                    uc.waypointDirection = math.normalize(ub[uc.currentBufferIndex].wayPoints - trans.Value);
-                    uc.avoidanceDirection.y = 0;
-                    uc.waypointDirection = uc.waypointDirection + uc.avoidanceDirection;
-                    trans.Value += uc.waypointDirection * uc.speed * deltaTime;
-                    if (!uc.reached && math.distance(trans.Value, ub[uc.currentBufferIndex].wayPoints) <= uc.minDistanceReached && uc.currentBufferIndex < ub.Length - 1)
-                    {
-                        uc.currentBufferIndex = uc.currentBufferIndex + 1;
-                        if (uc.currentBufferIndex == ub.Length - 1)
+           //.WithStructuralChanges()
+           .WithoutBurst()
+           .WithAll<Unit_Routed>().ForEach((Entity e, int entityInQueryIndex, ref Unit_Component uc, ref DynamicBuffer<Unit_Buffer> ub, ref DynamicBuffer<Schedule_Buffer> sb, ref Translation trans) =>
+           {
+               UnityEngine.AI.NavMeshHit outResult;
+               Translation newTrans = trans;
+
+               if (ub.Length > 0 && uc.routed)
+               {
+                   uc.waypointDirection = math.normalize(ub[uc.currentBufferIndex].wayPoints - trans.Value);
+                   uc.avoidanceDirection.y = 0;
+                   uc.waypointDirection = uc.waypointDirection + uc.avoidanceDirection;
+                   uc.waypointDirection.y = 0;
+
+                   newTrans.Value.y = 1.083333f;
+
+                   if (!UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 0.01f, NavMesh.AllAreas))
+                   {
+                       UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 1f, NavMesh.AllAreas);
+                       trans.Value.x = outResult.position.x;
+                       trans.Value.z = outResult.position.z;
+                   }
+
+                   newTrans.Value = trans.Value + uc.waypointDirection * uc.speed * deltaTime;
+                   newTrans.Value.y = 1.083333f;
+
+                   if (!UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 0.00001f, NavMesh.AllAreas))
+                   {
+                       uc.waypointDirection -= uc.avoidanceDirection;
+                       uc.flag = true;
+                   }
+
+                   trans.Value += uc.waypointDirection * uc.speed * deltaTime;
+                   float3 finalWayPoint = uc.toLocation;
+                   finalWayPoint.y = ub[uc.currentBufferIndex].wayPoints.y;
+
+                   if (math.distance(trans.Value, ub[uc.currentBufferIndex].wayPoints) <= uc.minDistanceReached)
+                   {
+
+                       if (uc.currentBufferIndex < ub.Length - 1 && !ub[uc.currentBufferIndex].wayPoints.Equals(finalWayPoint))
+                       {
+                           uc.currentBufferIndex = uc.currentBufferIndex + 1;
+                       }
+
+                       else if (uc.count < UnitManager.instance.roomsToVisit - 1)
+                       {
+                           uc.count += 1;
+                           uc.fromLocation = uc.toLocation;
+                           uc.toLocation = sb[uc.count].destination;
+                           uc.routed = false;
+                           uc.currentBufferIndex = 0;
+                           ub.Clear();
+                       }
+                       else if (uc.count == UnitManager.instance.roomsToVisit - 1)
+                       {
+                           ecb.DestroyEntity(e);
+                       }
+                   }
+
+                   /*
+                   else if (uc.reached && math.distance(trans.Value, ub[uc.currentBufferIndex].wayPoints) <= uc.minDistanceReached && uc.currentBufferIndex > 0)
+                   {
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(trans.Value, out outResult, 0.001f, NavMesh.AllAreas))
                         {
-                            uc.reached = true;
+                            UnityEngine.AI.NavMesh.SamplePosition(trans.Value, out outResult, 100.0f, NavMesh.AllAreas);
+                            trans.Value.x = outResult.position.x;
+                            trans.Value.z = outResult.position.z;
                         }
-                    }
-                    else if (uc.reached && math.distance(trans.Value, ub[uc.currentBufferIndex].wayPoints) <= uc.minDistanceReached && uc.currentBufferIndex > 0)
-                    {
                         uc.currentBufferIndex = uc.currentBufferIndex - 1;
                         if (uc.currentBufferIndex == 0)
                         {
                             uc.reached = false;
                         }
-                    }
-                }
-            }).ScheduleParallel();
+                   }
+                   */
+
+               }
+           }).Run();
+
     }
 
     protected override void OnDestroy()

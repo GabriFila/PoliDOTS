@@ -9,6 +9,7 @@ public class UnitManager : MonoBehaviour
     public int maxIterations;
     public bool useCache;
     public float spawnEvery;
+    public int roomsToVisit; 
 
     private void Awake()
     {

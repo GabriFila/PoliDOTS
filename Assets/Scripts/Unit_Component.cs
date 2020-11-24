@@ -1,5 +1,7 @@
-﻿using Unity.Entities;
+﻿using Unity.Collections;
+using Unity.Entities;
 using Unity.Mathematics;
+using UnityEngine;
 using UnityEngine.Experimental.AI;
 
 public struct Unit_Component : IComponentData
@@ -18,5 +20,10 @@ public struct Unit_Component : IComponentData
     public int currentBufferIndex;
     //Collision Avoidance
     public float3 avoidanceDirection;
+    public int count;
+    public bool flag;
+
+    public Vector3 nearestPoint;
+    public float distance;
 
 }
