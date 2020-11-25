@@ -77,14 +77,14 @@ public class Unit_System : SystemBase
         int counter = 0;
 
         Entities.
-            //WithNone<Unit_Routed>().
+            WithNone<Unit_Routed>().
             WithBurst(synchronousCompilation: true).
             WithStructuralChanges().
             ForEach((Entity e, ref Unit_Component uc, ref DynamicBuffer<Unit_Buffer> ub) =>
             {
                 if (i <= UnitManager.instance.maxEntitiesRoutedPerFrame)
                 {
-                    
+
                     string key = uc.fromLocation.x + "_" + uc.fromLocation.z + "_" + uc.toLocation.x + "_" + uc.toLocation.z;
                     //Cached path
 
@@ -191,41 +191,6 @@ public class Unit_System : SystemBase
                 cellVsEntityPositionsParallel.Add(GetUniqueKeyForPosition(trans.Value, 15), trans.Value);
             }).ScheduleParallel();
 
-        /*
-        NativeMultiHashMap<int, float3> cellVsEntityPositionsForJob = cellVsEntityPositions;
-        Entities
-            .WithReadOnly(cellVsEntityPositionsForJob)
-            .ForEach((ref Unit_Component uc, ref Translation trans) =>
-            {
-                int key = GetUniqueKeyForPosition(trans.Value, 15);
-                NativeMultiHashMapIterator<int> nmhKeyIterator;
-                float3 currentLocationToCheck;
-                float distanceThreshold = 0.5f;
-                float currentDistance;
-                int total = 0;
-                uc.avoidanceDirection = float3.zero;
-                if (cellVsEntityPositionsForJob.TryGetFirstValue(key, out currentLocationToCheck, out nmhKeyIterator))
-                {
-                    do
-                    {
-                        if (!trans.Value.Equals(currentLocationToCheck))
-                        {
-                            currentDistance = math.sqrt(math.lengthsq(trans.Value - currentLocationToCheck));
-                            if (currentDistance < distanceThreshold)
-                            {
-                                float3 distanceFromTo = trans.Value - currentLocationToCheck;
-                                uc.avoidanceDirection = uc.avoidanceDirection + math.normalize(distanceFromTo / currentDistance);
-                                total++;
-                            }
-                        }
-                    } while (cellVsEntityPositionsForJob.TryGetNextValue(out currentLocationToCheck, ref nmhKeyIterator));
-                    if (total > 0)
-                    {
-                        uc.avoidanceDirection = uc.avoidanceDirection / total;
-                    }
-                }
-            }).ScheduleParallel();
-        */
 
         NativeMultiHashMap<int, float3> cellVsEntityPositionsForJob = cellVsEntityPositions;
         Entities
@@ -295,7 +260,6 @@ public class Unit_System : SystemBase
                    if (!UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 0.00001f, NavMesh.AllAreas))
                    {
                        uc.waypointDirection -= uc.avoidanceDirection;
-                       uc.flag = true;
                    }
 
                    trans.Value += uc.waypointDirection * uc.speed * deltaTime;
@@ -316,8 +280,10 @@ public class Unit_System : SystemBase
                            uc.fromLocation = uc.toLocation;
                            uc.toLocation = sb[uc.count].destination;
                            uc.routed = false;
+                           uc.usingCachedPath = false;
                            uc.currentBufferIndex = 0;
                            ub.Clear();
+                           ecb.RemoveComponent<Unit_Routed>(e);
                        }
                        else if (uc.count == UnitManager.instance.roomsToVisit - 1)
                        {

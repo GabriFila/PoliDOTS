@@ -13,18 +13,14 @@ public struct Unit_Component : IComponentData
     public bool routed;
     public bool reached;
     public bool usingCachedPath;
+    
     //Movement
     public float3 waypointDirection;
     public float speed;
     public float minDistanceReached;
     public int currentBufferIndex;
+    
     //Collision Avoidance
     public float3 avoidanceDirection;
     public int count;
-    public bool flag;
-
-    public Vector3 nearestPoint;
-    public float distance;
-    public bool firstPath;
-
 }
