@@ -3,13 +3,12 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
-using System.Collections.Concurrent;
 
 public class Unit_Initializer_System : SystemBase
 {
     BeginInitializationEntityCommandBufferSystem bi_ECB;
     public float elapsedTime;
-    
+
     protected override void OnCreate()
     {
         bi_ECB = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
@@ -24,10 +23,12 @@ public class Unit_Initializer_System : SystemBase
 
         NativeArray<float3> roomsToVisit = new NativeArray<float3>(UnitManager.instance.roomsToVisit, Allocator.Temp);
         NativeArray<int> roomNumbers = new NativeArray<int>(UnitManager.instance.roomsToVisit, Allocator.Temp);
+        var randomArray = World.GetExistingSystem<RandomSystem>().RandomArray;
 
         elapsedTime += Time.DeltaTime;
 
-        for (i = 0; i < UnitManager.instance.roomsToVisit; i++) {
+        for (i = 0; i < UnitManager.instance.roomsToVisit; i++)
+        {
             num = UnityEngine.Random.Range(0, 10);
             while (roomNumbers.Contains(num))
                 num = UnityEngine.Random.Range(0, 10);
@@ -40,7 +41,7 @@ public class Unit_Initializer_System : SystemBase
 
         initX = UnityEngine.Random.Range(0, 40);
         roomsNumber = UnitManager.instance.roomsToVisit;
-        
+
         if (elapsedTime > UnitManager.instance.spawnEvery)
         {
             elapsedTime = 0;
@@ -49,20 +50,23 @@ public class Unit_Initializer_System : SystemBase
                 .WithBurst(synchronousCompilation: true)
                 .ForEach((Entity e, int entityInQueryIndex, in Unit_Initializer_Component uic, in LocalToWorld ltw) =>
                 {
+                    var random = randomArray[entityInQueryIndex];
+
                     for (int t = 0; t < uic.xGridCount; t++)
                     {
                         for (int j = 0; j < uic.zGridCount; j++)
                         {
                             Entity defEntity = ecb.Instantiate(entityInQueryIndex, uic.prefabToSpawn);
                             float3 position = new float3(initX, uic.baseOffset, 0) + uic.currentPosition;
-                            
+
                             ecb.SetComponent(entityInQueryIndex, defEntity, new Translation { Value = position });
                             ecb.AddComponent<Unit_Component>(entityInQueryIndex, defEntity);
                             ecb.AddBuffer<Unit_Buffer>(entityInQueryIndex, defEntity);
                             ecb.AddBuffer<Schedule_Buffer>(entityInQueryIndex, defEntity);
 
-                            for (int k = 0; k < roomsNumber; k++) {
-                                ecb.AppendToBuffer(entityInQueryIndex, defEntity, new Schedule_Buffer { destination = roomsToVisit[k] });
+                            for (int k = 0; k < roomsNumber; k++)
+                            {
+                                ecb.AppendToBuffer(entityInQueryIndex, defEntity, new Schedule_Buffer { destination = roomsToVisit[random.NextInt(roomsNumber)] });
                             }
 
                             Unit_Component uc = new Unit_Component();
@@ -74,6 +78,7 @@ public class Unit_Initializer_System : SystemBase
                             uc.minDistanceReached = uic.minDistanceReached;
 
                             ecb.SetComponent(entityInQueryIndex, defEntity, uc);
+                            randomArray[entityInQueryIndex] = random;
                         }
                     }
                     //ecb.DestroyEntity(entityInQueryIndex, e);
