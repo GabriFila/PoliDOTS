@@ -25,5 +25,6 @@ public struct Unit_Component : IComponentData
 
     public Vector3 nearestPoint;
     public float distance;
+    public bool firstPath;
 
 }

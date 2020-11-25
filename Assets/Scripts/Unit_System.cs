@@ -15,13 +15,14 @@ public class Unit_System : SystemBase
 {
     private NavMeshQuery query;
     private float3 extents;
-    private Dictionary<int, float3[]> allPaths;
+    private Dictionary<string, float3[]> allPaths;
     private List<Entity> routedEntities;
     private List<NativeArray<int>> statusOutputs;
     private List<NativeArray<float3>> results;
     private List<NavMeshQuery> queries;
     private NavMeshWorld navMeshWorld;
     private List<JobHandle> jobHandles;
+    private List<string> keys;
 
     BeginInitializationEntityCommandBufferSystem bi_ECB;
 
@@ -36,19 +37,21 @@ public class Unit_System : SystemBase
         bi_ECB = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
 
         extents = new float3(200, 200, 200);
-        allPaths = new Dictionary<int, float3[]>();
+        allPaths = new Dictionary<string, float3[]>();
         statusOutputs = new List<NativeArray<int>>();
         results = new List<NativeArray<float3>>();
         routedEntities = new List<Entity>();
         queries = new List<NavMeshQuery>();
         jobHandles = new List<JobHandle>();
+        keys = new List<string>();
 
-        for (int n = 0; n <= 10000; n++)
+        for (int n = 0; n <= 4000; n++)
         {
             NativeArray<float3> result = new NativeArray<float3>(1024, Allocator.Persistent);
             NativeArray<int> statusOutput = new NativeArray<int>(3, Allocator.Persistent);
             statusOutputs.Add(statusOutput);
             results.Add(result);
+            keys.Add("");
         }
         navMeshWorld = NavMeshWorld.GetDefaultWorld();
 
@@ -71,18 +74,7 @@ public class Unit_System : SystemBase
 
         float deltaTime = Time.DeltaTime;
         int i = 0;
-
-        /*float3[] myValue;
-
-        UnityEngine.Debug.Log("Start");
-
-        foreach (int myKey in allPaths.Keys) {
-            UnityEngine.Debug.Log("Key: " + myKey);
-            allPaths.TryGetValue(myKey, out myValue);
-            UnityEngine.Debug.Log("First way point " + myValue[0]);
-        }
-
-        UnityEngine.Debug.Log("End");*/
+        int counter = 0;
 
         Entities.
             //WithNone<Unit_Routed>().
@@ -92,9 +84,8 @@ public class Unit_System : SystemBase
             {
                 if (i <= UnitManager.instance.maxEntitiesRoutedPerFrame)
                 {
-                    int fromKey = ((int)uc.fromLocation.x + (int)uc.fromLocation.y + (int)uc.fromLocation.z) * UnitManager.instance.maxPathSize;
-                    int toKey = ((int)uc.toLocation.x + (int)uc.toLocation.y + (int)uc.toLocation.z) * UnitManager.instance.maxPathSize;
-                    int key = fromKey + toKey;
+                    
+                    string key = uc.fromLocation.x + "_" + uc.fromLocation.z + "_" + uc.toLocation.x + "_" + uc.toLocation.z;
                     //Cached path
 
                     if (UnitManager.instance.useCache && allPaths.ContainsKey(key) && !uc.routed)
@@ -113,6 +104,8 @@ public class Unit_System : SystemBase
                     //Job
                     if (!uc.routed)
                     {
+                        keys[counter] = key;
+
                         NavMeshQuery currentQuery = new NavMeshQuery(navMeshWorld, Allocator.Persistent, UnitManager.instance.maxPathNodePoolSize);
                         SinglePathFindingJob spfj = new SinglePathFindingJob()
                         {
@@ -123,14 +116,15 @@ public class Unit_System : SystemBase
                             toLocation = uc.toLocation,
                             extents = extents,
                             maxIteration = UnitManager.instance.maxIterations,
-                            result = results[i],
-                            statusOutput = statusOutputs[i],
+                            result = results[counter],
+                            statusOutput = statusOutputs[counter],
                             maxPathSize = UnitManager.instance.maxPathSize,
                             ub = ub
                         };
                         routedEntities.Add(e);
                         queries.Add(currentQuery);
                         jobHandles.Add(spfj.Schedule());
+                        counter++;
                     }
                     i++;
                 }
@@ -155,7 +149,8 @@ public class Unit_System : SystemBase
         {
             if (statusOutputs[j][0] == 1)
             {
-                if (UnitManager.instance.useCache && !allPaths.ContainsKey(statusOutputs[j][1]))
+
+                if (UnitManager.instance.useCache && !allPaths.ContainsKey(keys[j]))
                 {
                     float3[] wayPoints = new float3[statusOutputs[j][2]];
                     for (int k = 0; k < statusOutputs[j][2]; k++)
@@ -164,7 +159,7 @@ public class Unit_System : SystemBase
                     }
                     if (wayPoints.Length > 0)
                     {
-                        allPaths.Add(statusOutputs[j][1], wayPoints);
+                        allPaths.Add(keys[j], wayPoints);
                     }
                 }
                 Unit_Component uc = EntityManager.GetComponentData<Unit_Component>(routedEntities[j]);
@@ -414,11 +409,8 @@ public class Unit_System : SystemBase
                         );
                     if (returningStatus == PathQueryStatus.Success)
                     {
-                        int fromKey = ((int)fromLocation.x + (int)fromLocation.y + (int)fromLocation.z) * maxPathSize;
-                        int toKey = ((int)toLocation.x + (int)toLocation.y + (int)toLocation.z) * maxPathSize;
-                        int key = fromKey + toKey;
                         statusOutput[0] = 1;
-                        statusOutput[1] = key;
+                        statusOutput[1] = 1;
                         statusOutput[2] = straightPathCount;
 
                         for (int i = 0; i < straightPathCount; i++)

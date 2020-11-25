@@ -79,6 +79,8 @@ public class Unit_Initializer_System : SystemBase
 
                             uc.flag = false;
 
+                            uc.firstPath = true;
+
                             ecb.SetComponent(defEntity, uc);
                         }
                     }
