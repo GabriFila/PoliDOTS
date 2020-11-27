@@ -23,6 +23,7 @@ public class Unit_System : SystemBase
     private NavMeshWorld navMeshWorld;
     private List<JobHandle> jobHandles;
     private List<string> keys;
+   
 
     BeginInitializationEntityCommandBufferSystem bi_ECB;
 
@@ -45,7 +46,7 @@ public class Unit_System : SystemBase
         jobHandles = new List<JobHandle>();
         keys = new List<string>();
 
-        for (int n = 0; n <= 4000; n++)
+        for (int n = 0; n <= 2000; n++)
         {
             NativeArray<float3> result = new NativeArray<float3>(1024, Allocator.Persistent);
             NativeArray<int> statusOutput = new NativeArray<int>(3, Allocator.Persistent);
@@ -84,25 +85,24 @@ public class Unit_System : SystemBase
             {
                 if (i <= UnitManager.instance.maxEntitiesRoutedPerFrame)
                 {
-
                     string key = uc.fromLocation.x + "_" + uc.fromLocation.z + "_" + uc.toLocation.x + "_" + uc.toLocation.z;
                     //Cached path
 
-                    if (UnitManager.instance.useCache && allPaths.ContainsKey(key) && !uc.routed)
+                    if (UnitManager.instance.useCache && allPaths.ContainsKey(key))
                     {
+                        //UnityEngine.Debug.Log("Im inside the cache path");
                         allPaths.TryGetValue(key, out float3[] cachedPath);
                         for (int h = 0; h < cachedPath.Length; h++)
                         {
                             ub.Add(new Unit_Buffer { wayPoints = cachedPath[h] });
                         }
-                        // copia gli elementi direttamente
                         uc.routed = true;
                         uc.usingCachedPath = true;
                         EntityManager.AddComponent<Unit_Routed>(e);
                         return;
                     }
                     //Job
-                    if (!uc.routed)
+                    else
                     {
                         keys[counter] = key;
 
@@ -144,11 +144,16 @@ public class Unit_System : SystemBase
         JobHandle.CompleteAll(jhs);
         jhs.Dispose();
 
+        if(n != 0)
+            UnityEngine.Debug.Log("Jobs performed " + n);
+
         int j = 0;
         foreach (JobHandle jh in jobHandles)
         {
             if (statusOutputs[j][0] == 1)
             {
+                
+                UnityEngine.Debug.Log(EntityManager.GetComponentData<Unit_Component>(routedEntities[j]).id + " " + EntityManager.GetBuffer<Unit_Buffer>(routedEntities[j]).Length);
 
                 if (UnitManager.instance.useCache && !allPaths.ContainsKey(keys[j]))
                 {
@@ -274,7 +279,7 @@ public class Unit_System : SystemBase
                            uc.currentBufferIndex = uc.currentBufferIndex + 1;
                        }
 
-                       else if (uc.count < UnitManager.instance.roomsToVisit - 1)
+                       else if (uc.count < sb.Length - 1)
                        {
                            uc.count += 1;
                            uc.fromLocation = uc.toLocation;
@@ -285,28 +290,11 @@ public class Unit_System : SystemBase
                            ub.Clear();
                            ecb.RemoveComponent<Unit_Routed>(e);
                        }
-                       else if (uc.count == UnitManager.instance.roomsToVisit - 1)
+                       else if (uc.count == sb.Length - 1)
                        {
                            ecb.DestroyEntity(e);
                        }
                    }
-
-                   /*
-                   else if (uc.reached && math.distance(trans.Value, ub[uc.currentBufferIndex].wayPoints) <= uc.minDistanceReached && uc.currentBufferIndex > 0)
-                   {
-                        if (!UnityEngine.AI.NavMesh.SamplePosition(trans.Value, out outResult, 0.001f, NavMesh.AllAreas))
-                        {
-                            UnityEngine.AI.NavMesh.SamplePosition(trans.Value, out outResult, 100.0f, NavMesh.AllAreas);
-                            trans.Value.x = outResult.position.x;
-                            trans.Value.z = outResult.position.z;
-                        }
-                        uc.currentBufferIndex = uc.currentBufferIndex - 1;
-                        if (uc.currentBufferIndex == 0)
-                        {
-                            uc.reached = false;
-                        }
-                   }
-                   */
 
                }
            }).Run();
@@ -379,12 +367,16 @@ public class Unit_System : SystemBase
                         statusOutput[1] = 1;
                         statusOutput[2] = straightPathCount;
 
+                        if (straightPathCount == 0)
+                            UnityEngine.Debug.Log("Something wrong");
+
                         for (int i = 0; i < straightPathCount; i++)
                         {
                             result[i] = (float3)res[i].position + new float3(0, 0.75f, 0); // elevated point
                             ub.Add(new Unit_Buffer { wayPoints = result[i] });
                         }
                     }
+
                     res.Dispose();
                     straightPathFlag.Dispose();
                     polys.Dispose();
@@ -396,3 +388,5 @@ public class Unit_System : SystemBase
 }
 
 public struct Unit_Routed : IComponentData { }
+
+public struct Unit_Cached : IComponentData { }

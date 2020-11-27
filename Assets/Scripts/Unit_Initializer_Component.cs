@@ -6,6 +6,7 @@ public struct Unit_Initializer_Component : IComponentData
 {
     public int xGridCount;
     public int zGridCount;
+    public int numEntitiesToSpawn;
     public float baseOffset;
     public float xPadding;
     public float zPadding;

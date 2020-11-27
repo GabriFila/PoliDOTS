@@ -23,4 +23,6 @@ public struct Unit_Component : IComponentData
     //Collision Avoidance
     public float3 avoidanceDirection;
     public int count;
+    public int course;
+    public int id;
 }
