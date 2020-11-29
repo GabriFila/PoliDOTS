@@ -5,6 +5,7 @@ using Unity.Transforms;
 using UnityEngine;
 using System.Collections.Generic;
 using Assets.Scripts;
+using System;
 
 public class Unit_Initializer_System : SystemBase
 {
@@ -95,6 +96,8 @@ public class Unit_Initializer_System : SystemBase
 
                         ecb.SetComponent(defEntity, new Translation { Value = position });
                         ecb.AddComponent<Unit_Component>(defEntity);
+                        ecb.AddComponent<Person_Component>(defEntity);
+                        ecb.AddComponent<Course_Component>(defEntity);
                         ecb.AddBuffer<Unit_Buffer>(defEntity);
                         sb = ecb.AddBuffer<Schedule_Buffer>(defEntity);
 
@@ -140,16 +143,32 @@ public class Unit_Initializer_System : SystemBase
                             count = 0,
                             toLocation = myDestination,
                             currentBufferIndex = 0,
-                            speed = (float)new Unity.Mathematics.Random(uic.seed).NextDouble(uic.minSpeed, uic.maxSpeed),
+                            speed = GenerateInt(uic.minSpeed, uic.maxSpeed),
                             minDistanceReached = uic.minDistanceReached,
                             routed = false,
-                            course = currentCourse,
-                            id = entitiesId
+                            //course = currentCourse,
+                            //id = entitiesId
+                        };
+
+                        //fill in data into components
+                        Course_Component courseComponent = new Course_Component
+                        {
+                            id = selectedCourse.Id,
+                            lessonStart = selectedCourse.LessonStart
+                        };
+
+                        Person_Component personComponent = new Person_Component
+                        {
+                            age = GenerateInt(19, 30),
+                            sex = GenerateSex()
                         };
 
                         entitiesId++;
 
                         ecb.SetComponent(defEntity, uc);
+                        ecb.SetComponent(defEntity, courseComponent);
+                        ecb.SetComponent(defEntity, personComponent);
+
                         availableCourses.Dispose();
                     }
                 }).Run();
@@ -157,14 +176,25 @@ public class Unit_Initializer_System : SystemBase
         bi_ECB.AddJobHandleForProducer(Dependency);
 
     }
-
     protected override void OnDestroy()
     {
         //courses.Dispose();
     }
-    private int GenerateInt(int i)
+    private int GenerateInt(int v1)
     {
-        return UnityEngine.Random.Range(0, i);
+        return UnityEngine.Random.Range(0, v1);
+    }
+    private int GenerateInt(int v1, int v2)
+    {
+        return UnityEngine.Random.Range(v1, v2);
+    }
+    private char GenerateSex()
+    {
+        int sex = GenerateInt(2);
+        if (sex == 0)
+            return 'M';
+        else
+            return 'F';
     }
     private int[] GenerateDuration(int courseID)
     {
@@ -190,11 +220,44 @@ public class Unit_Initializer_System : SystemBase
                 return new int[] { 1, 2, 2, 1 };
             case 9:
                 return new int[] { 1, 1, 1, 1, 1, 1, 1 };
+            case 10:
+                return new int[] { 1, 1, 2, 1, 2 };
+            case 11:
+                return new int[] { 1, 1, 1, 1, 1, 2 };
+            case 12:
+                return new int[] { 2, 2, 3 };
+            case 13:
+                return new int[] { 1, 1, 1, 1, 1, 1, 1 };
+            case 14:
+                return new int[] { 1, 1, 1, 2 };
+            case 15:
+                return new int[] { 1, 1, 3, 1, 1 };
+            case 16:
+                return new int[] { 1, 1, 1, 1, 1, 1, 1 };
+            case 17:
+                return new int[] { 3, 3 };
+            case 18:
+                return new int[] { 1, 1, 2, 2 };
+            case 19:
+                return new int[] { 1, 1, 2, 1, 1 };
+            case 20:
+                return new int[] { 1, 1, 1, 1 };
+            case 21:
+                return new int[] { 1, 2, 2 };
+            case 22:
+                return new int[] { 1, 3, 1, 1, 1};
+            case 23:
+                return new int[] { 1, 1, 1, 1, 1, 1, 1 };
+            case 24:
+                return new int[] { 1, 1, 1, 1 };
+            case 25:
+                return new int[] { 1, 1, 1, 1, 2 };
+            case 26:
+                return new int[] { 1, 2, 2, 1, 1 };
             default:
                 throw new System.ArgumentException();
         };
     }
-
     private int[] GenerateTimeTable(int courseID)
     {
         //generate random number between 0 and MAX_ROOM_NUMBER
@@ -203,25 +266,59 @@ public class Unit_Initializer_System : SystemBase
         switch (courseID)
         {
             case 0:
-                return new int[] { 0, 1, 9, 4 }; //2
+                return new int[] { 0, 1, 9, 4 };
             case 1:
-                return new int[] { 7, 1, 2, 4, 9, 4, 2 }; //1
+                return new int[] { 7, 1, 2, 4, 9, 4, 2 };
             case 2:
-                return new int[] { 0, 0, 0, 5, 7 }; //4
+                return new int[] { 0, 0, 0, 5, 7 }; 
             case 3:
-                return new int[] { 0, 2, 1, 3, 5, 6, 1 }; //2
+                return new int[] { 0, 2, 1, 3, 5, 6, 1 };
             case 4:
-                return new int[] { 3, 5, 1, 3 }; //1
+                return new int[] { 3, 5, 1, 3 };
             case 5:
-                return new int[] { 0, 0, 5, 6, 7 }; //3
+                return new int[] { 0, 0, 5, 6, 7 };
             case 6:
-                return new int[] { 1, 7, 3 }; //1
+                return new int[] { 1, 7, 3 };
             case 7:
-                return new int[] { 0, 9 }; //2
+                return new int[] { 0, 9 };
             case 8:
-                return new int[] { 4, 8, 2, 6 }; //1
+                return new int[] { 4, 8, 2, 6 };
             case 9:
-                return new int[] { 0, 0, 0, 0, 8, 5, 4 }; //5
+                return new int[] { 0, 0, 0, 0, 8, 5, 4 };
+            case 10:
+                return new int[] { 7, 2, 3, 2, 9 };
+            case 11:
+                return new int[] { 0, 0, 8, 4, 6, 7 };
+            case 12:
+                return new int[] { 0, 0, 7 };
+            case 13:
+                return new int[] { 0, 9, 7, 3, 6, 2, 8 };
+            case 14:
+                return new int[] { 3, 6, 2, 4 };
+            case 15:
+                return new int[] { 0, 0, 0, 2, 7 };
+            case 16:
+                return new int[] { 0, 0, 0, 0, 1, 7, 3 };
+            case 17:
+                return new int[] { 0, 6 };
+            case 18:
+                return new int[] { 2, 5, 3, 2 };
+            case 19:
+                return new int[] { 0, 0, 8, 3, 4 }; 
+            case 20:
+                return new int[] { 0, 1, 9, 4 }; 
+            case 21:
+                return new int[] { 9, 4, 2 };
+            case 22:
+                return new int[] { 0, 0, 0, 3, 4 }; 
+            case 23:
+                return new int[] { 0, 0, 0, 0, 0, 0, 1 }; 
+            case 24:
+                return new int[] { 0, 0, 4, 3 }; 
+            case 25:
+                return new int[] { 0, 0, 2, 4, 1 }; 
+            case 26:
+                return new int[] { 1, 8, 3, 6, 2 }; 
             default:
                 throw new System.ArgumentException();
         };
