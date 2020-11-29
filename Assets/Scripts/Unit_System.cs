@@ -23,21 +23,26 @@ public class Unit_System : SystemBase
     private NavMeshWorld navMeshWorld;
     private List<JobHandle> jobHandles;
     private List<string> keys;
-   
+
+    private int totCycles;
+    private float totTime;
+    private float previousTime;
+    private int FPS;
+    private int totFPS;
+
 
     BeginInitializationEntityCommandBufferSystem bi_ECB;
 
-    //----------- Collision Avoidance Code -----------------
+    //----------- Collision Avoidance initialization code start -----------------
     public static NativeMultiHashMap<int, float3> cellVsEntityPositions;
     public static int totalCollisions;
-    //----------- Collision Avoidance Code End -------------
-
+    //----------- Collision Avoidance initialization code end -------------
 
     protected override void OnCreate()
     {
         bi_ECB = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
 
-        extents = new float3(200, 200, 200);
+        extents = new float3(50, 50, 50);
         allPaths = new Dictionary<string, float3[]>();
         statusOutputs = new List<NativeArray<int>>();
         results = new List<NativeArray<float3>>();
@@ -46,7 +51,12 @@ public class Unit_System : SystemBase
         jobHandles = new List<JobHandle>();
         keys = new List<string>();
 
-        for (int n = 0; n <= 2000; n++)
+        totFPS = 0;
+        totCycles = 0;
+        totTime = 0;
+        previousTime = 0;
+
+        for (int n = 0; n <= 1000; n++)
         {
             NativeArray<float3> result = new NativeArray<float3>(1024, Allocator.Persistent);
             NativeArray<int> statusOutput = new NativeArray<int>(3, Allocator.Persistent);
@@ -56,29 +66,34 @@ public class Unit_System : SystemBase
         }
         navMeshWorld = NavMeshWorld.GetDefaultWorld();
 
-        //----------- Collision Avoidance Code -----------------
+        //----------- Collision Avoidance OnCreate code start -----------------
         totalCollisions = 0;
         cellVsEntityPositions = new NativeMultiHashMap<int, float3>(0, Allocator.Persistent);
-        //----------- Collision Avoidance Code End -------------
+        //----------- Collision Avoidance OnCreate code end -------------
     }
 
-    //----------- Collision Avoidance Code -----------------
+    //----------- Collision Avoidance function definition code start -----------------
     public static int GetUniqueKeyForPosition(float3 position, int cellSize)
     {
         return (int)(19 * math.floor(position.x / cellSize) + (17 * math.floor(position.z / cellSize)));
     }
-    //----------- Collision Avoidance Code End -------------
+    //----------- Collision Avoidance function definition code end -------------
 
     protected override void OnUpdate()
     {
-        var ecb = bi_ECB.CreateCommandBuffer();
-
         float deltaTime = Time.DeltaTime;
-        int i = 0;
-        int counter = 0;
+
+        totCycles++;
+
+        FPS = (int)(1f / deltaTime);
+        totFPS += FPS;
+        UnityEngine.Debug.Log(totFPS / totCycles);
+       
+
+        var ecb = bi_ECB.CreateCommandBuffer();
+        int i = 0, counter = 0;
 
         Entities.
-            WithNone<Unit_Routed>().
             WithBurst(synchronousCompilation: true).
             WithStructuralChanges().
             ForEach((Entity e, ref Unit_Component uc, ref DynamicBuffer<Unit_Buffer> ub) =>
@@ -86,11 +101,10 @@ public class Unit_System : SystemBase
                 if (i <= UnitManager.instance.maxEntitiesRoutedPerFrame)
                 {
                     string key = uc.fromLocation.x + "_" + uc.fromLocation.z + "_" + uc.toLocation.x + "_" + uc.toLocation.z;
+                    
                     //Cached path
-
-                    if (UnitManager.instance.useCache && allPaths.ContainsKey(key))
+                    if (UnitManager.instance.useCache && allPaths.ContainsKey(key) && (!uc.routed || ub.Length == 0))
                     {
-                        //UnityEngine.Debug.Log("Im inside the cache path");
                         allPaths.TryGetValue(key, out float3[] cachedPath);
                         for (int h = 0; h < cachedPath.Length; h++)
                         {
@@ -102,7 +116,7 @@ public class Unit_System : SystemBase
                         return;
                     }
                     //Job
-                    else
+                    else if (!uc.routed || ub.Length == 0)
                     {
                         keys[counter] = key;
 
@@ -134,6 +148,7 @@ public class Unit_System : SystemBase
                 }
             }).Run();
 
+        //Waiting for the completion of jobs
         int n = 0;
         NativeArray<JobHandle> jhs = new NativeArray<JobHandle>(jobHandles.Count, Allocator.Temp);
         foreach (JobHandle jh in jobHandles)
@@ -144,17 +159,11 @@ public class Unit_System : SystemBase
         JobHandle.CompleteAll(jhs);
         jhs.Dispose();
 
-        if(n != 0)
-            UnityEngine.Debug.Log("Jobs performed " + n);
-
         int j = 0;
         foreach (JobHandle jh in jobHandles)
         {
             if (statusOutputs[j][0] == 1)
             {
-                
-                UnityEngine.Debug.Log(EntityManager.GetComponentData<Unit_Component>(routedEntities[j]).id + " " + EntityManager.GetBuffer<Unit_Buffer>(routedEntities[j]).Length);
-
                 if (UnitManager.instance.useCache && !allPaths.ContainsKey(keys[j]))
                 {
                     float3[] wayPoints = new float3[statusOutputs[j][2]];
@@ -167,6 +176,7 @@ public class Unit_System : SystemBase
                         allPaths.Add(keys[j], wayPoints);
                     }
                 }
+
                 Unit_Component uc = EntityManager.GetComponentData<Unit_Component>(routedEntities[j]);
                 uc.routed = true;
                 EntityManager.SetComponentData<Unit_Component>(routedEntities[j], uc);
@@ -182,6 +192,7 @@ public class Unit_System : SystemBase
         //----------- Collision Avoidance Code -----------------
 
         EntityQuery eq = GetEntityQuery(typeof(Unit_Component));
+
         cellVsEntityPositions.Clear();
         if (eq.CalculateEntityCount() > cellVsEntityPositions.Capacity)
         {
@@ -298,7 +309,6 @@ public class Unit_System : SystemBase
 
                }
            }).Run();
-
     }
 
     protected override void OnDestroy()

@@ -482,7 +482,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   xGridCount: 1
   zGridCount: 1
-  numEntitiesToSpawn: 30
+  numEntitiesToSpawn: 300
   baseOffset: 2
   xPadding: 1.5
   zPadding: 1.5
@@ -18595,7 +18595,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxPathSize: 1024
-  maxEntitiesRoutedPerFrame: 2000
+  maxEntitiesRoutedPerFrame: 4000
   maxPathNodePoolSize: 1024
   maxIterations: 1024
   useCache: 1
