@@ -10,8 +10,7 @@ public class UnitManager : MonoBehaviour
     public bool useCache;
     public float spawnEvery;
     public int roomsToVisit;
-    public float coeffFrom;
-    public float coeffTo;
+    public int numberOfRooms;
 
     private void Awake()
     {

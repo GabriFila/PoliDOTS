@@ -14,13 +14,20 @@ public class Unit_Initializer_System : SystemBase
     public int timeSlot;
     public List<Course> courses;
     public int numberOfCourses;
+    
     //used to keep track of the last slot entities can be spawned
     public int latestSlot;
     public int currentCourse;
     public int entitiesId;
 
+    public int lessonStart;
+    public int maxDayHours;
+
     protected override void OnCreate()
     {
+        maxDayHours = 7;
+        lessonStart = 0;
+
         timeSlot = 0;
         entitiesId = 0;
         numberOfCourses = CourseName.GetValues(typeof(CourseName)).Length;
@@ -29,16 +36,15 @@ public class Unit_Initializer_System : SystemBase
 
         int[] schedule;
         int[] durations;
-        int lessonStart = 0;
         latestSlot = 0;
 
         for (int count = 0; count < numberOfCourses; count++)
         {
-            Debug.Log(count);
-            lessons = new List<Lesson>();
-            schedule = GenerateTimeTable(count);
-            durations = GenerateDuration(count);
+            //lessons = new List<Lesson>();
+            //schedule = GenerateTimeTable(count);
+            //durations = GenerateDuration(count);
 
+            /*
             for (int j = 0; j < schedule.Length; j++)
             {
                 if (schedule[j] == 0)
@@ -49,13 +55,22 @@ public class Unit_Initializer_System : SystemBase
 
                 lessons.Add(new Lesson(schedule[j], durations[j]));
             }
+            */
 
-            //lessons = GenerateSchedule(out lessonStart);
+            //lessons = new List<Lesson>();
+            
+            lessons = GenerateSchedule(out lessonStart);
+            
             if (latestSlot < lessonStart)
                 latestSlot = lessonStart;
             courses.Add(new Course(count, CourseName.GetValues(typeof(CourseName)).GetValue(count).ToString(), lessons, lessonStart));
             
-            //UnityEngine.Debug.Log(courses[count].Name + " " + courses[count].Id + " " + courses[count].Lessons.Count + " " + courses[count].LessonStart);
+            UnityEngine.Debug.Log(courses[count].Name + ", id: " + count + ", number of lessons: " + courses[count].Lessons.Count + ", lesson start at: " + courses[count].LessonStart);
+            for(int k=0; k < courses[count].Lessons.Count ; k++)
+            {
+                UnityEngine.Debug.Log("Lesson " + k + " room: " + courses[count].Lessons[k].Room + ", duration: " + courses[count].Lessons[k].Duration);
+            }
+            //UnityEngine.Debug.Log(count);
             
             lessonStart = 0;
         }
@@ -73,7 +88,7 @@ public class Unit_Initializer_System : SystemBase
         //courses that are available for the current timeslot in which the entity is created
         NativeArray<int> availableCourses;
 
-        var randomArray = World.GetExistingSystem<RandomSystem>().RandomArray;
+        //var randomArray = World.GetExistingSystem<RandomSystem>().RandomArray;
 
         elapsedTime += Time.DeltaTime;
 
@@ -82,11 +97,12 @@ public class Unit_Initializer_System : SystemBase
         {
             elapsedTime = 0;
             timeSlot++;
+           
             Entities
                 .WithoutBurst()
                 .ForEach((Entity e, int entityInQueryIndex, in Unit_Initializer_Component uic, in LocalToWorld ltw) =>
                 {
-                    //var random = randomArray[entityInQueryIndex];
+                    //List<Course> myCourses = courses;
 
                     for (int j = 0; j < uic.numEntitiesToSpawn; j++)
                     {
@@ -100,12 +116,11 @@ public class Unit_Initializer_System : SystemBase
                         ecb.AddBuffer<Unit_Buffer>(defEntity);
                         sb = ecb.AddBuffer<Schedule_Buffer>(defEntity);
 
-                        //find courses that begin at current timeslot => cicle over non-managed courses and find the ones with lessonStart = timeSlot
-                        availableCourses = new NativeArray<int>(numberOfCourses, Allocator.Temp);
+                        availableCourses = new NativeArray<int>(CourseName.GetValues(typeof(CourseName)).Length, Allocator.Temp);
                         int numberAvailableCourses = 0;
                         for (int k = 0; k < courses.Count; k++)
                         {
-                            if (courses[k].LessonStart == timeSlot-1)
+                            if (courses[k].LessonStart == timeSlot)
                             {
                                 availableCourses[numberAvailableCourses] = courses[k].Id;
                                 //UnityEngine.Debug.Log(courses[k].Id);
@@ -113,19 +128,26 @@ public class Unit_Initializer_System : SystemBase
                             }
                         }
 
-                        //UnityEngine.Debug.Log(numberAvailableCourses);
-
                         //select randomly a course from the available ones
                         int selectedCourseId = availableCourses[GenerateInt(numberAvailableCourses)];
+
+                        //UnityEngine.Debug.Log("Selected index " + selectedCourseId);
+
                         Course selectedCourse = courses[selectedCourseId];
                         currentCourse = selectedCourse.Id;
+
+                        //UnityEngine.Debug.Log("Selected course id " + currentCourse);
 
                         float3 myDestination;
 
                         //add lessons to Schedule_Buffer
+
+                        UnityEngine.Debug.Log("Selected course # of lessons " + selectedCourse.Lessons.Count);
                        
                         for (int k = 0; k < selectedCourse.Lessons.Count; k++)
                         {
+                            UnityEngine.Debug.Log("Selected course room " + selectedCourse.Lessons[k].Room + " ,duration " + selectedCourse.Lessons[k].Duration);
+
                             myDestination = GameObject.Find("Aula" + selectedCourse.Lessons[k].Room).GetComponent<Renderer>().bounds.center;
                             myDestination.x += GenerateInt(-6, 7);
                             myDestination.y = 2f;
@@ -158,8 +180,8 @@ public class Unit_Initializer_System : SystemBase
                             speed = GenerateInt(uic.minSpeed, uic.maxSpeed),
                             minDistanceReached = uic.minDistanceReached,
                             routed = false,
-                            //course = currentCourse,
-                            //id = entitiesId
+                            course = currentCourse,
+                            id = entitiesId
                         };
 
                         //fill in data into components
@@ -335,53 +357,48 @@ public class Unit_Initializer_System : SystemBase
                 throw new System.ArgumentException();
         };
     }
+
     private List<Lesson> GenerateSchedule(out int lessonStart)
     {
+        //UnityEngine.Debug.Log("Enter in generate schedule");
+
         int numberOfRooms = 10;
         List<Lesson> schedule = new List<Lesson>();
-        int numberOfLessons = GenerateInt(1, 8);
+        List<int> durationsForLessons = new List<int>();
 
-        Debug.Log(numberOfLessons);
-        int[] rooms = new int[numberOfLessons];
-        int[] durations = new int[numberOfLessons];
-        int sum;
+        lessonStart = GenerateInt(1, maxDayHours);
+        int maxSlots = maxDayHours - lessonStart;
+        int singleDuration;
 
-        lessonStart = GenerateInt(1, numberOfLessons);
-        
-        //generate 0 rooms for free lessons at the beginning
-        for(int i = 0; i < lessonStart-1; i++)
+        while (maxSlots != 0)
         {
-            rooms[i] = 0;
-            durations[i] = 0;
-        }
-
-        //generate random rooms without two rooms being the same one after the other
-        rooms[lessonStart-1] = GenerateInt(1, numberOfRooms);
-        for (int i = lessonStart; i < numberOfLessons; i++)
-        {
-            do
+            singleDuration = GenerateInt(1, 3); //the number of slots for each lecture is between 1 and 2 (1.5 or 3 hours)
+            if (maxSlots - singleDuration < 0)
             {
-                rooms[i] = GenerateInt(1, numberOfRooms);
+                durationsForLessons.Add(maxSlots);
+                maxSlots = 0;
             }
-            while (rooms[i] != rooms[i - 1]);
-        }
-
-        //generate random durations for the lessons considering that the max sum(lessonLenght) = 7
-        do
-        {
-            sum = 0;
-            for(int i = lessonStart-1; i < numberOfLessons; i++ )
+            else
             {
-                durations[i] = GenerateInt(1, 3);
-                sum += durations[i];
+                durationsForLessons.Add(singleDuration);
+                maxSlots -= singleDuration;
             }
         }
-        while (sum <= (7 - lessonStart-1));
 
+        int[] rooms = new int[durationsForLessons.Count];
 
-        for(int i = 0; i < numberOfLessons; i++)
+        for (int i = 0; i < durationsForLessons.Count; i++)
         {
-            schedule.Add(new Lesson(rooms[i], durations[i]));
+            rooms[i] = GenerateInt(1, numberOfRooms);
+
+            if (i != 0)
+                while (rooms[i] == rooms[i - 1])
+                    rooms[i] = GenerateInt(1, numberOfRooms);
+        }
+
+        for (int i = 0; i < durationsForLessons.Count; i++)
+        {
+            schedule.Add(new Lesson(rooms[i], durationsForLessons[i]));
         }
 
         return schedule;

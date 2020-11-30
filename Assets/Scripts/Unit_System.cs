@@ -42,7 +42,7 @@ public class Unit_System : SystemBase
     {
         bi_ECB = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
 
-        extents = new float3(50, 50, 50);
+        extents = new float3(100, 100, 100);
         allPaths = new Dictionary<string, float3[]>();
         statusOutputs = new List<NativeArray<int>>();
         results = new List<NativeArray<float3>>();
@@ -56,7 +56,7 @@ public class Unit_System : SystemBase
         totTime = 0;
         previousTime = 0;
 
-        for (int n = 0; n <= 1000; n++)
+        for (int n = 0; n <= 4000; n++)
         {
             NativeArray<float3> result = new NativeArray<float3>(1024, Allocator.Persistent);
             NativeArray<int> statusOutput = new NativeArray<int>(3, Allocator.Persistent);
@@ -81,14 +81,7 @@ public class Unit_System : SystemBase
 
     protected override void OnUpdate()
     {
-        float deltaTime = Time.DeltaTime;
-
-        totCycles++;
-
-        FPS = (int)(1f / deltaTime);
-        totFPS += FPS;
-        UnityEngine.Debug.Log(totFPS / totCycles);
-       
+        float deltaTime = Time.DeltaTime;       
 
         var ecb = bi_ECB.CreateCommandBuffer();
         int i = 0, counter = 0;

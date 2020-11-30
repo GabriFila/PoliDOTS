@@ -482,7 +482,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   xGridCount: 1
   zGridCount: 1
-  numEntitiesToSpawn: 300
+  numEntitiesToSpawn: 200
   baseOffset: 2
   xPadding: 1.5
   zPadding: 1.5
@@ -493,7 +493,7 @@ MonoBehaviour:
     z: -50
   destinationDistanceZAxis: 45
   minSpeed: 5
-  maxSpeed: 20
+  maxSpeed: 6
   minDistanceReached: 0.25
   seed: 15
 --- !u!114 &12802439
@@ -18601,8 +18601,7 @@ MonoBehaviour:
   useCache: 1
   spawnEvery: 5
   roomsToVisit: 5
-  coeffFrom: 1.3
-  coeffTo: 0.6
+  numberOfRooms: 10
 --- !u!4 &2052615789
 Transform:
   m_ObjectHideFlags: 0
