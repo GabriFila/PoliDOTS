@@ -5,7 +5,6 @@ using Unity.Transforms;
 using UnityEngine;
 using System.Collections.Generic;
 using Assets.Scripts;
-using System;
 
 public class Unit_Initializer_System : SystemBase
 {
@@ -35,6 +34,7 @@ public class Unit_Initializer_System : SystemBase
 
         for (int count = 0; count < numberOfCourses; count++)
         {
+            Debug.Log(count);
             lessons = new List<Lesson>();
             schedule = GenerateTimeTable(count);
             durations = GenerateDuration(count);
@@ -50,8 +50,7 @@ public class Unit_Initializer_System : SystemBase
                 lessons.Add(new Lesson(schedule[j], durations[j]));
             }
 
-            //UnityEngine.Debug.Log("Course " + count + " starts in the slot " + lessonStart);
-
+            //lessons = GenerateSchedule(out lessonStart);
             if (latestSlot < lessonStart)
                 latestSlot = lessonStart;
             courses.Add(new Course(count, CourseName.GetValues(typeof(CourseName)).GetValue(count).ToString(), lessons, lessonStart));
@@ -128,15 +127,28 @@ public class Unit_Initializer_System : SystemBase
                         for (int k = 0; k < selectedCourse.Lessons.Count; k++)
                         {
                             myDestination = GameObject.Find("Aula" + selectedCourse.Lessons[k].Room).GetComponent<Renderer>().bounds.center;
+                            myDestination.x += GenerateInt(-6, 7);
                             myDestination.y = 2f;
+                            myDestination.z += GenerateInt(-6, 7);
+
                             sb.Add(new Schedule_Buffer
                             {
                                 destination = myDestination,
                                 duration = selectedCourse.Lessons[k].Duration
                             });
                         }
+
+                        sb.Add(new Schedule_Buffer
+                        {
+                            destination = position,
+                            //duration = 0
+                        });
+
+
                         myDestination = GameObject.Find("Aula" + selectedCourse.Lessons[0].Room).GetComponent<Renderer>().bounds.center;
+                        myDestination.x += GenerateInt(-6, 7);
                         myDestination.y = 2f;
+                        myDestination.z += GenerateInt(-6, 7);
                         Unit_Component uc = new Unit_Component
                         {
                             fromLocation = position,
@@ -180,13 +192,13 @@ public class Unit_Initializer_System : SystemBase
     {
         //courses.Dispose();
     }
-    private int GenerateInt(int v1)
-    {
-        return UnityEngine.Random.Range(0, v1);
-    }
     private int GenerateInt(int v1, int v2)
     {
         return UnityEngine.Random.Range(v1, v2);
+    }
+    private int GenerateInt(int v1)
+    {
+        return GenerateInt(0, v1);
     }
     private char GenerateSex()
     {
@@ -323,5 +335,55 @@ public class Unit_Initializer_System : SystemBase
                 throw new System.ArgumentException();
         };
     }
+    private List<Lesson> GenerateSchedule(out int lessonStart)
+    {
+        int numberOfRooms = 10;
+        List<Lesson> schedule = new List<Lesson>();
+        int numberOfLessons = GenerateInt(1, 8);
 
+        Debug.Log(numberOfLessons);
+        int[] rooms = new int[numberOfLessons];
+        int[] durations = new int[numberOfLessons];
+        int sum;
+
+        lessonStart = GenerateInt(1, numberOfLessons);
+        
+        //generate 0 rooms for free lessons at the beginning
+        for(int i = 0; i < lessonStart-1; i++)
+        {
+            rooms[i] = 0;
+            durations[i] = 0;
+        }
+
+        //generate random rooms without two rooms being the same one after the other
+        rooms[lessonStart-1] = GenerateInt(1, numberOfRooms);
+        for (int i = lessonStart; i < numberOfLessons; i++)
+        {
+            do
+            {
+                rooms[i] = GenerateInt(1, numberOfRooms);
+            }
+            while (rooms[i] != rooms[i - 1]);
+        }
+
+        //generate random durations for the lessons considering that the max sum(lessonLenght) = 7
+        do
+        {
+            sum = 0;
+            for(int i = lessonStart-1; i < numberOfLessons; i++ )
+            {
+                durations[i] = GenerateInt(1, 3);
+                sum += durations[i];
+            }
+        }
+        while (sum <= (7 - lessonStart-1));
+
+
+        for(int i = 0; i < numberOfLessons; i++)
+        {
+            schedule.Add(new Lesson(rooms[i], durations[i]));
+        }
+
+        return schedule;
+    }
 }
