@@ -1,15 +1,13 @@
-﻿using Unity.Entities;
-using Unity.Jobs;
-using Unity.Mathematics;
+﻿using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
-using UnityEngine.Experimental.AI;
-using System.Collections.Generic;
+using Unity.Entities;
+using Unity.Jobs;
+using Unity.Mathematics;
+using Unity.Rendering;
 using Unity.Transforms;
-using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.AI;
-using System.Diagnostics;
-using UnityEngine;
+using UnityEngine.Experimental.AI;
 
 public class Unit_System : SystemBase
 {
@@ -81,12 +79,13 @@ public class Unit_System : SystemBase
 
     protected override void OnUpdate()
     {
-        float deltaTime = Time.DeltaTime;       
+        float deltaTime = Time.DeltaTime;
 
         var ecb = bi_ECB.CreateCommandBuffer();
         int i = 0, counter = 0;
 
         Entities.
+            WithNone<WaitComponent>().
             WithBurst(synchronousCompilation: true).
             WithStructuralChanges().
             ForEach((Entity e, ref Unit_Component uc, ref DynamicBuffer<Unit_Buffer> ub) =>
@@ -94,7 +93,7 @@ public class Unit_System : SystemBase
                 if (i <= UnitManager.instance.maxEntitiesRoutedPerFrame)
                 {
                     string key = uc.fromLocation.x + "_" + uc.fromLocation.z + "_" + uc.toLocation.x + "_" + uc.toLocation.z;
-                    
+
                     //Cached path
                     if (UnitManager.instance.useCache && allPaths.ContainsKey(key) && (!uc.routed || ub.Length == 0))
                     {
@@ -293,6 +292,17 @@ public class Unit_System : SystemBase
                            uc.currentBufferIndex = 0;
                            ub.Clear();
                            ecb.RemoveComponent<Unit_Routed>(e);
+                           // TODO take slots to wait from schedule buffer
+                           ecb.AddComponent(e, new WaitComponent
+                           {
+                               slotsToWait = sb[uc.count].duration,
+                               waitEndTime = 0
+                           });
+                           ecb.SetSharedComponent(e, new RenderMesh
+                           {
+                               mesh = UnitManager.instance.unitMesh,
+                               material = UnitManager.instance.waitMaterial
+                           });
                        }
                        else if (uc.count == sb.Length - 1)
                        {

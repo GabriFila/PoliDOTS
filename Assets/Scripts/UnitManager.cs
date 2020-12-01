@@ -11,6 +11,9 @@ public class UnitManager : MonoBehaviour
     public float spawnEvery;
     public int roomsToVisit;
     public int numberOfRooms;
+    public Material waitMaterial;
+    public Material activeMaterial;
+    public Mesh unitMesh;
 
     private void Awake()
     {
