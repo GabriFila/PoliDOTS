@@ -1,7 +1,7 @@
 ﻿using Unity.Entities;
 using Unity.Mathematics;
 
-public struct Unit_Buffer : IBufferElementData
+public struct UnitBuffer : IBufferElementData
 {
     public float3 wayPoints;
 }

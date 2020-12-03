@@ -4,7 +4,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Experimental.AI;
 
-public struct Unit_Component : IComponentData
+public struct UnitComponent : IComponentData
 {
     public float3 toLocation;
     public float3 fromLocation;
@@ -23,6 +23,5 @@ public struct Unit_Component : IComponentData
     //Collision Avoidance
     public float3 avoidanceDirection;
     public int count;
-    public int course;
-    public int id;
+
 }

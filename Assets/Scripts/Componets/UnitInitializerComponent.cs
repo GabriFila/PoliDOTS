@@ -2,18 +2,13 @@
 using Unity.Mathematics;
 
 [GenerateAuthoringComponent]
-public struct Unit_Initializer_Component : IComponentData
+public struct UnitInitializerComponent : IComponentData
 {
-    public int xGridCount;
-    public int zGridCount;
     public int numEntitiesToSpawn;
     public float baseOffset;
-    public float xPadding;
-    public float zPadding;
     public Entity prefabToSpawn;
     //New
     public float3 currentPosition;
-    public int destinationDistanceZAxis;
     public int minSpeed;
     public int maxSpeed;
     public float minDistanceReached;

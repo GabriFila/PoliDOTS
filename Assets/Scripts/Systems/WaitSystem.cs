@@ -21,7 +21,7 @@ public class WaitSystem : SystemBase
         long slotDuration = timeSlotDurationMs;
 
         Entities
-            .WithBurst(synchronousCompilation: true)
+            .WithoutBurst()
             .ForEach((Entity e, int entityInQueryIndex, ref WaitComponent wc) =>
             {
                 if (wc.waitEndTime == 0)

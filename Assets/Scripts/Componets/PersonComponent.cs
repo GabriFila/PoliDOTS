@@ -1,6 +1,6 @@
 ﻿using Unity.Entities;
 
-public struct Person_Component : IComponentData
+public struct PersonComponent : IComponentData
 {
     public int age;
     public char sex;

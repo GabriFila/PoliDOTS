@@ -9,7 +9,7 @@ using Unity.Transforms;
 using UnityEngine.AI;
 using UnityEngine.Experimental.AI;
 
-public class Unit_System : SystemBase
+public class UnitSystem : SystemBase
 {
     private NavMeshQuery query;
     private float3 extents;
@@ -22,19 +22,13 @@ public class Unit_System : SystemBase
     private List<JobHandle> jobHandles;
     private List<string> keys;
 
-    private int totCycles;
-    private float totTime;
-    private float previousTime;
-    private int FPS;
-    private int totFPS;
-
-
     BeginInitializationEntityCommandBufferSystem bi_ECB;
 
-    //----------- Collision Avoidance initialization code start -----------------
+    //---------------------- Collision Avoidance ---------------------------
+    
     public static NativeMultiHashMap<int, float3> cellVsEntityPositions;
-    public static int totalCollisions;
-    //----------- Collision Avoidance initialization code end -------------
+
+    //---------------------- Collision Avoidance ---------------------------
 
     protected override void OnCreate()
     {
@@ -49,33 +43,30 @@ public class Unit_System : SystemBase
         jobHandles = new List<JobHandle>();
         keys = new List<string>();
 
-        totFPS = 0;
-        totCycles = 0;
-        totTime = 0;
-        previousTime = 0;
-
-        for (int n = 0; n <= 4000; n++)
+        for (int n = 0; n <= 4000; n++) //limit number equals to Max Entities routed per frame of UnitManager game object
         {
             NativeArray<float3> result = new NativeArray<float3>(1024, Allocator.Persistent);
-            NativeArray<int> statusOutput = new NativeArray<int>(3, Allocator.Persistent);
+            NativeArray<int> statusOutput = new NativeArray<int>(2, Allocator.Persistent);
             statusOutputs.Add(statusOutput);
             results.Add(result);
             keys.Add("");
         }
         navMeshWorld = NavMeshWorld.GetDefaultWorld();
 
-        //----------- Collision Avoidance OnCreate code start -----------------
-        totalCollisions = 0;
+        //---------------------- Collision Avoidance ---------------------------
+
         cellVsEntityPositions = new NativeMultiHashMap<int, float3>(0, Allocator.Persistent);
-        //----------- Collision Avoidance OnCreate code end -------------
+
+        //---------------------- Collision Avoidance ---------------------------
     }
 
-    //----------- Collision Avoidance function definition code start -----------------
+    //---------------------- Collision Avoidance ---------------------------
+
     public static int GetUniqueKeyForPosition(float3 position, int cellSize)
     {
         return (int)(19 * math.floor(position.x / cellSize) + (17 * math.floor(position.z / cellSize)));
     }
-    //----------- Collision Avoidance function definition code end -------------
+    //---------------------- Collision Avoidance ---------------------------
 
     protected override void OnUpdate()
     {
@@ -88,7 +79,7 @@ public class Unit_System : SystemBase
             WithNone<WaitComponent>().
             WithBurst(synchronousCompilation: true).
             WithStructuralChanges().
-            ForEach((Entity e, ref Unit_Component uc, ref DynamicBuffer<Unit_Buffer> ub) =>
+            ForEach((Entity e, ref UnitComponent uc, ref DynamicBuffer<UnitBuffer> ub) =>
             {
                 if (i <= UnitManager.instance.maxEntitiesRoutedPerFrame)
                 {
@@ -100,11 +91,11 @@ public class Unit_System : SystemBase
                         allPaths.TryGetValue(key, out float3[] cachedPath);
                         for (int h = 0; h < cachedPath.Length; h++)
                         {
-                            ub.Add(new Unit_Buffer { wayPoints = cachedPath[h] });
+                            ub.Add(new UnitBuffer { wayPoints = cachedPath[h] });
                         }
                         uc.routed = true;
                         uc.usingCachedPath = true;
-                        EntityManager.AddComponent<Unit_Routed>(e);
+                        EntityManager.AddComponent<UnitRouted>(e);
                         return;
                     }
                     //Job
@@ -158,8 +149,8 @@ public class Unit_System : SystemBase
             {
                 if (UnitManager.instance.useCache && !allPaths.ContainsKey(keys[j]))
                 {
-                    float3[] wayPoints = new float3[statusOutputs[j][2]];
-                    for (int k = 0; k < statusOutputs[j][2]; k++)
+                    float3[] wayPoints = new float3[statusOutputs[j][1]];
+                    for (int k = 0; k < statusOutputs[j][1]; k++)
                     {
                         wayPoints[k] = results[j][k];
                     }
@@ -169,10 +160,10 @@ public class Unit_System : SystemBase
                     }
                 }
 
-                Unit_Component uc = EntityManager.GetComponentData<Unit_Component>(routedEntities[j]);
+                UnitComponent uc = EntityManager.GetComponentData<UnitComponent>(routedEntities[j]);
                 uc.routed = true;
-                EntityManager.SetComponentData<Unit_Component>(routedEntities[j], uc);
-                EntityManager.AddComponent<Unit_Routed>(routedEntities[j]);
+                EntityManager.SetComponentData<UnitComponent>(routedEntities[j], uc);
+                EntityManager.AddComponent<UnitRouted>(routedEntities[j]);
             }
             queries[j].Dispose();
             j++;
@@ -183,7 +174,7 @@ public class Unit_System : SystemBase
 
         //----------- Collision Avoidance Code -----------------
 
-        EntityQuery eq = GetEntityQuery(typeof(Unit_Component));
+        EntityQuery eq = GetEntityQuery(typeof(UnitComponent));
 
         cellVsEntityPositions.Clear();
         if (eq.CalculateEntityCount() > cellVsEntityPositions.Capacity)
@@ -193,8 +184,9 @@ public class Unit_System : SystemBase
 
         NativeMultiHashMap<int, float3>.ParallelWriter cellVsEntityPositionsParallel = cellVsEntityPositions.AsParallelWriter();
         Entities
+            .WithNone<WaitComponent>()
             .WithBurst(synchronousCompilation: true)
-            .ForEach((ref Unit_Component uc, ref Translation trans) =>
+            .ForEach((ref UnitComponent uc, ref Translation trans) =>
             {
                 cellVsEntityPositionsParallel.Add(GetUniqueKeyForPosition(trans.Value, 15), trans.Value);
             }).ScheduleParallel();
@@ -202,9 +194,10 @@ public class Unit_System : SystemBase
 
         NativeMultiHashMap<int, float3> cellVsEntityPositionsForJob = cellVsEntityPositions;
         Entities
+            .WithNone<WaitComponent>()
             .WithBurst(synchronousCompilation: true)
             .WithReadOnly(cellVsEntityPositionsForJob)
-            .ForEach((ref Unit_Component uc, ref Translation trans) =>
+            .ForEach((ref UnitComponent uc, ref Translation trans) =>
             {
                 int key = GetUniqueKeyForPosition(trans.Value, 15);
                 NativeMultiHashMapIterator<int> nmhKeyIterator;
@@ -236,12 +229,11 @@ public class Unit_System : SystemBase
 
         //----------- Collision Avoidance Code -----------------
 
-
         //Movement
         Entities
-           //.WithStructuralChanges()
            .WithoutBurst()
-           .WithAll<Unit_Routed>().ForEach((Entity e, int entityInQueryIndex, ref Unit_Component uc, ref DynamicBuffer<Unit_Buffer> ub, ref DynamicBuffer<Schedule_Buffer> sb, ref Translation trans) =>
+           .WithNone<WaitComponent>()
+           .WithAll<UnitRouted>().ForEach((Entity e, int entityInQueryIndex, ref UnitComponent uc, ref DynamicBuffer<UnitBuffer> ub, ref DynamicBuffer<ScheduleBuffer> sb, ref Translation trans) =>
            {
                UnityEngine.AI.NavMeshHit outResult;
                Translation newTrans = trans;
@@ -253,9 +245,9 @@ public class Unit_System : SystemBase
                    uc.waypointDirection = uc.waypointDirection + uc.avoidanceDirection;
                    uc.waypointDirection.y = 0;
 
-                   newTrans.Value.y = 1.083333f;
+                   newTrans.Value.y = 1.791667f;
 
-                   if (!UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 0.01f, NavMesh.AllAreas))
+                   if (!UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 0.001f, NavMesh.AllAreas))
                    {
                        UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 1f, NavMesh.AllAreas);
                        trans.Value.x = outResult.position.x;
@@ -263,12 +255,13 @@ public class Unit_System : SystemBase
                    }
 
                    newTrans.Value = trans.Value + uc.waypointDirection * uc.speed * deltaTime;
-                   newTrans.Value.y = 1.083333f;
+                   newTrans.Value.y = 1.791667f;
 
-                   if (!UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 0.00001f, NavMesh.AllAreas))
+                   if (!UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 0.001f, NavMesh.AllAreas))
                    {
                        uc.waypointDirection -= uc.avoidanceDirection;
                    }
+                   
 
                    trans.Value += uc.waypointDirection * uc.speed * deltaTime;
                    float3 finalWayPoint = uc.toLocation;
@@ -291,25 +284,25 @@ public class Unit_System : SystemBase
                            uc.usingCachedPath = false;
                            uc.currentBufferIndex = 0;
                            ub.Clear();
-                           ecb.RemoveComponent<Unit_Routed>(e);
-                           // TODO take slots to wait from schedule buffer
+                           ecb.RemoveComponent<UnitRouted>(e);
                            ecb.AddComponent(e, new WaitComponent
                            {
                                slotsToWait = sb[uc.count].duration,
                                waitEndTime = 0
                            });
+
                            ecb.SetSharedComponent(e, new RenderMesh
                            {
                                mesh = UnitManager.instance.unitMesh,
                                material = UnitManager.instance.waitMaterial
                            });
+
                        }
                        else if (uc.count == sb.Length - 1)
                        {
                            ecb.DestroyEntity(e);
                        }
                    }
-
                }
            }).Run();
     }
@@ -337,11 +330,10 @@ public class Unit_System : SystemBase
         public float3 toLocation;
         public float3 extents;
         public int maxIteration;
-        public DynamicBuffer<Unit_Buffer> ub;
+        public DynamicBuffer<UnitBuffer> ub;
         public NativeArray<float3> result;
         public NativeArray<int> statusOutput;
         public int maxPathSize;
-
         public void Execute()
         {
             nml_FromLocation = query.MapLocation(fromLocation, extents, 0);
@@ -377,16 +369,12 @@ public class Unit_System : SystemBase
                     if (returningStatus == PathQueryStatus.Success)
                     {
                         statusOutput[0] = 1;
-                        statusOutput[1] = 1;
-                        statusOutput[2] = straightPathCount;
-
-                        if (straightPathCount == 0)
-                            UnityEngine.Debug.Log("Something wrong");
+                        statusOutput[1] = straightPathCount;
 
                         for (int i = 0; i < straightPathCount; i++)
                         {
                             result[i] = (float3)res[i].position + new float3(0, 0.75f, 0); // elevated point
-                            ub.Add(new Unit_Buffer { wayPoints = result[i] });
+                            ub.Add(new UnitBuffer { wayPoints = result[i] });
                         }
                     }
 
@@ -400,6 +388,4 @@ public class Unit_System : SystemBase
     }
 }
 
-public struct Unit_Routed : IComponentData { }
-
-public struct Unit_Cached : IComponentData { }
+public struct UnitRouted : IComponentData { }
