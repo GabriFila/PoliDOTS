@@ -10,9 +10,9 @@ public class UnitManager : MonoBehaviour
     public bool useCache;
     public float spawnEvery;
     
-    public int numberOfRooms; 
     public Material waitMaterial; 
-    public Material activeMaterial; 
+    public Material activeMaterial;
+    public Material covdMaterial;
     public Mesh unitMesh; 
 
     private void Awake()

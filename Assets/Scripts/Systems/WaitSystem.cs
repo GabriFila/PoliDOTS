@@ -1,6 +1,7 @@
 ﻿using System;
 using Unity.Entities;
 using Unity.Rendering;
+using UnityEngine;
 
 public class WaitSystem : SystemBase
 {
@@ -22,7 +23,7 @@ public class WaitSystem : SystemBase
 
         Entities
             .WithoutBurst()
-            .ForEach((Entity e, int entityInQueryIndex, ref WaitComponent wc) =>
+            .ForEach((Entity e, int entityInQueryIndex, ref WaitComponent wc, ref PersonComponent pc) =>
             {
                 if (wc.waitEndTime == 0)
                     wc.waitEndTime = currentUnixTimeMs + wc.slotsToWait * slotDuration;
@@ -30,10 +31,18 @@ public class WaitSystem : SystemBase
                 {
                     ecb.RemoveComponent<WaitComponent>(entityInQueryIndex, e);
                     // TODO when enabling burst the following line throws a one-time error, which doesn't seem to affect the execution
+
+                    Material unitMaterial;
+
+                    if (pc.hasCovid)
+                        unitMaterial = UnitManager.instance.covdMaterial;
+                    else
+                        unitMaterial = UnitManager.instance.activeMaterial;
+                    
                     ecb.SetSharedComponent(entityInQueryIndex, e, new RenderMesh
                     {
                         mesh = UnitManager.instance.unitMesh,
-                        material = UnitManager.instance.activeMaterial
+                        material = unitMaterial
                     });
                 }
             }).ScheduleParallel();

@@ -4,4 +4,5 @@ public struct PersonComponent : IComponentData
 {
     public int age;
     public char sex;
+    public bool hasCovid;
 }

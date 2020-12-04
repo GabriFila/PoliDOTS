@@ -5,6 +5,7 @@ using Unity.Transforms;
 using UnityEngine;
 using System.Collections.Generic;
 using Assets.Scripts;
+using Unity.Rendering;
 
 public class UnitInitializerSystem : SystemBase
 {
@@ -26,7 +27,7 @@ public class UnitInitializerSystem : SystemBase
 
     protected override void OnCreate()
     { 
-        numberOfRooms = 10;
+        numberOfRooms = 11;
         maxDayHours = 7; 
         lessonStart = 0;
         timeSlot = 0;
@@ -81,6 +82,8 @@ public class UnitInitializerSystem : SystemBase
                     {
                         Entity defEntity = ecb.Instantiate(uic.prefabToSpawn);
                         float3 position = new float3(UnityEngine.Random.Range(0, 36), uic.baseOffset, 0) + uic.currentPosition; //value 36 based on the spawner position (-28,0,-47)
+                        bool covidValue = false;
+                        Material unitMaterial = UnitManager.instance.activeMaterial;
 
                         ecb.SetComponent(defEntity, new Translation { Value = position });
                         ecb.AddComponent<UnitComponent>(defEntity);
@@ -132,6 +135,9 @@ public class UnitInitializerSystem : SystemBase
                             routed = false
                         };
 
+                        if (timeSlot == 1 && j == 0) //only the first entity in the first slot has covid to simulate what can be the infection
+                            covidValue = true;
+
                         CourseComponent courseComponent = new CourseComponent
                         {
                             id = selectedCourse.Id,
@@ -141,8 +147,18 @@ public class UnitInitializerSystem : SystemBase
                         PersonComponent personComponent = new PersonComponent
                         {
                             age = GenerateInt(19, 30),
-                            sex = GenerateSex()
+                            sex = GenerateSex(),
+                            hasCovid = covidValue
                         };
+
+                        if (covidValue)
+                            unitMaterial = UnitManager.instance.covdMaterial;
+
+                        ecb.AddSharedComponent(e, new RenderMesh
+                        {
+                            mesh = UnitManager.instance.unitMesh,
+                            material = unitMaterial
+                        });
 
                         ecb.SetComponent(defEntity, uc);
                         ecb.SetComponent(defEntity, courseComponent);

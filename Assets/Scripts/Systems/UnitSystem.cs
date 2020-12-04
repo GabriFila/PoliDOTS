@@ -70,6 +70,8 @@ public class UnitSystem : SystemBase
 
     protected override void OnUpdate()
     {
+        List<float3> covidPositions = new List<float3>();
+
         float deltaTime = Time.DeltaTime;
 
         var ecb = bi_ECB.CreateCommandBuffer();
@@ -77,10 +79,14 @@ public class UnitSystem : SystemBase
 
         Entities.
             WithNone<WaitComponent>().
-            WithBurst(synchronousCompilation: true).
+            WithoutBurst().
             WithStructuralChanges().
-            ForEach((Entity e, ref UnitComponent uc, ref DynamicBuffer<UnitBuffer> ub) =>
+            ForEach((Entity e, ref UnitComponent uc, ref DynamicBuffer<UnitBuffer> ub, ref Translation trans, ref PersonComponent pc) =>
             {
+
+                if (pc.hasCovid)
+                    covidPositions.Add(trans.Value);
+
                 if (i <= UnitManager.instance.maxEntitiesRoutedPerFrame)
                 {
                     string key = uc.fromLocation.x + "_" + uc.fromLocation.z + "_" + uc.toLocation.x + "_" + uc.toLocation.z;
@@ -233,7 +239,7 @@ public class UnitSystem : SystemBase
         Entities
            .WithoutBurst()
            .WithNone<WaitComponent>()
-           .WithAll<UnitRouted>().ForEach((Entity e, int entityInQueryIndex, ref UnitComponent uc, ref DynamicBuffer<UnitBuffer> ub, ref DynamicBuffer<ScheduleBuffer> sb, ref Translation trans) =>
+           .WithAll<UnitRouted>().ForEach((Entity e, int entityInQueryIndex, ref UnitComponent uc, ref DynamicBuffer<UnitBuffer> ub, ref DynamicBuffer<ScheduleBuffer> sb, ref Translation trans, ref PersonComponent pc, in RenderMesh rm) =>
            {
                UnityEngine.AI.NavMeshHit outResult;
                Translation newTrans = trans;
@@ -261,7 +267,22 @@ public class UnitSystem : SystemBase
                    {
                        uc.waypointDirection -= uc.avoidanceDirection;
                    }
-                   
+
+                   if (!pc.hasCovid)
+                   {
+                       foreach (float3 pos in covidPositions)
+                           if (math.abs(pos.x - trans.Value.x) < 0.5 && math.abs(pos.z - trans.Value.z) < 0.5)
+                           {
+                               ecb.SetSharedComponent(e, new RenderMesh
+                               {
+                                   mesh = UnitManager.instance.unitMesh,
+                                   material = UnitManager.instance.covdMaterial
+                               });
+
+                               pc.hasCovid = true;
+                               break;
+                           }
+                   }
 
                    trans.Value += uc.waypointDirection * uc.speed * deltaTime;
                    float3 finalWayPoint = uc.toLocation;
