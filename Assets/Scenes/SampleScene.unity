@@ -167,7 +167,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6b794785454555b42b74b15049f22fb6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numEntitiesToSpawn: 200
+  numEntitiesToSpawn: 300
   baseOffset: 2
   prefabToSpawn: {fileID: 791808037844798824, guid: e94a1f1c0afd1d44f867a21ac439956f, type: 3}
   currentPosition:
@@ -11420,7 +11420,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pb_Mesh-2406
+  m_Name: pb_Mesh-2380
   serializedVersion: 10
   m_SubMeshes:
   - serializedVersion: 2
@@ -20530,8 +20530,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxPathSize: 1024
   maxEntitiesRoutedPerFrame: 4000
-  maxPathNodePoolSize: 2048
-  maxIterations: 2048
+  maxPathNodePoolSize: 1024
+  maxIterations: 1024
   useCache: 1
   spawnEvery: 5
   waitMaterial: {fileID: 2100000, guid: ad26f0bfdf3fde945a53e2745ae529b6, type: 2}
