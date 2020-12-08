@@ -3,5 +3,5 @@
 public struct CourseComponent : IComponentData
 {
     public int id;
-    public int lessonStart;
+    public int lectureStart;
 }

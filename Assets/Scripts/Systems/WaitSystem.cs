@@ -18,7 +18,7 @@ public class WaitSystem : SystemBase
     {
         var ecb = bi_ECB.CreateCommandBuffer().AsParallelWriter();
 
-        long currentUnixTimeMs = ((DateTimeOffset)DateTime.Now).ToUnixTimeMilliseconds();
+        long currentUnixTimeS = ((DateTimeOffset)DateTime.Now).ToUnixTimeSeconds();
         long slotDuration = timeSlotDurationMs;
 
         Entities
@@ -26,8 +26,8 @@ public class WaitSystem : SystemBase
             .ForEach((Entity e, int entityInQueryIndex, ref WaitComponent wc, ref PersonComponent pc) =>
             {
                 if (wc.waitEndTime == 0)
-                    wc.waitEndTime = currentUnixTimeMs + wc.slotsToWait * slotDuration;
-                else if (currentUnixTimeMs > wc.waitEndTime)
+                    wc.waitEndTime = currentUnixTimeS + wc.slotsToWait * UnitManager.instance.timeSlotDurationS;
+                else if (currentUnixTimeS > wc.waitEndTime)
                 {
                     ecb.RemoveComponent<WaitComponent>(entityInQueryIndex, e);
                     // TODO when enabling burst the following line throws a one-time error, which doesn't seem to affect the execution
@@ -35,10 +35,10 @@ public class WaitSystem : SystemBase
                     Material unitMaterial;
 
                     if (pc.hasCovid)
-                        unitMaterial = UnitManager.instance.covdMaterial;
+                        unitMaterial = UnitManager.instance.covidMoveMaterial;
                     else
-                        unitMaterial = UnitManager.instance.activeMaterial;
-                    
+                        unitMaterial = UnitManager.instance.healthyMoveMaterial;
+
                     ecb.SetSharedComponent(entityInQueryIndex, e, new RenderMesh
                     {
                         mesh = UnitManager.instance.unitMesh,

@@ -8,12 +8,13 @@ public class UnitManager : MonoBehaviour
     public int maxPathNodePoolSize;
     public int maxIterations;
     public bool useCache;
-    public float spawnEvery;
-    
-    public Material waitMaterial; 
-    public Material activeMaterial;
-    public Material covdMaterial;
-    public Mesh unitMesh; 
+    public int timeSlotDurationS;
+
+    public Material healthyMoveMaterial;
+    public Material healthyWaitMaterial;
+    public Material covidMoveMaterial;
+    public Material covidWaitMaterial;
+    public Mesh unitMesh;
 
     private void Awake()
     {

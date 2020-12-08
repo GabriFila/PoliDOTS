@@ -1,51 +1,47 @@
-﻿using Unity.Collections;
+﻿using Assets.Scripts;
+using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine;
-using System.Collections.Generic;
-using Assets.Scripts;
-using Unity.Rendering;
 
 public class UnitInitializerSystem : SystemBase
 {
     BeginInitializationEntityCommandBufferSystem bi_ECB;
-    private DynamicBuffer<ScheduleBuffer> sb;
     public float elapsedTime;
     public int timeSlot;
     public List<Course> courses;
     public int currentCourse;
-   
-    public int latestSlot;
+
+    public int lastSlot;
     public int numberOfCourses;
-    
+
     public int numberOfRooms;
-    public int lessonStart;
-    public int maxDayHours;
-    
-    NativeArray<int> availableCourses;
+    public int maxSlotsInSingleDay;
+
+    NativeArray<int> availableCoursesIds;
 
     protected override void OnCreate()
-    { 
+    {
         numberOfRooms = 30;
-        maxDayHours = 7; 
-        lessonStart = 0;
+        maxSlotsInSingleDay = 7;
+        int lectureStart;
         timeSlot = 0;
-        
-        numberOfCourses = CourseName.GetValues(typeof(CourseName)).Length;
-        courses = new List<Course>(); 
-        latestSlot = 0;
 
-        List<Lesson> lessons;
+        numberOfCourses = CourseName.GetValues(typeof(CourseName)).Length;
+        courses = new List<Course>();
+        lastSlot = 0;
+
+        List<Lecture> lectures;
         for (int count = 0; count < numberOfCourses; count++)
-        {   
-            lessons = GenerateSchedule(out lessonStart);
-            
-            if (latestSlot < lessonStart)
-                latestSlot = lessonStart;
-            courses.Add(new Course(count, CourseName.GetValues(typeof(CourseName)).GetValue(count).ToString(), lessons, lessonStart));
-           
-            lessonStart = 0;
+        {
+            lectures = GenerateSchedule(out lectureStart);
+
+            if (lastSlot < lectureStart)
+                lastSlot = lectureStart;
+            courses.Add(new Course(count, CourseName.GetValues(typeof(CourseName)).GetValue(count).ToString(), lectures, lectureStart));
         }
 
         bi_ECB = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
@@ -56,20 +52,19 @@ public class UnitInitializerSystem : SystemBase
     {
         var ecb = bi_ECB.CreateCommandBuffer();
         elapsedTime += Time.DeltaTime;
-
-        //if another slot has passed and there are still some courses beginning in a later slot i enter the lambda
-        if (elapsedTime > UnitManager.instance.spawnEvery && timeSlot <= latestSlot)
+        //spawn units when sim starts and every if another slot has passed and there are still some courses beginning in a later slot i enter the lambda
+        if (timeSlot == 0 || (elapsedTime > UnitManager.instance.timeSlotDurationS && timeSlot <= lastSlot))
         {
             elapsedTime = 0;
             timeSlot++;
 
-            availableCourses = new NativeArray<int>(CourseName.GetValues(typeof(CourseName)).Length, Allocator.Temp);
+            availableCoursesIds = new NativeArray<int>(CourseName.GetValues(typeof(CourseName)).Length, Allocator.Temp);
             int numberAvailableCourses = 0;
             for (int k = 0; k < courses.Count; k++)
             {
-                if (courses[k].LessonStart == timeSlot)
+                if (courses[k].LectureStart == timeSlot)
                 {
-                    availableCourses[numberAvailableCourses] = courses[k].Id;
+                    availableCoursesIds[numberAvailableCourses] = courses[k].Id;
                     numberAvailableCourses++;
                 }
             }
@@ -82,34 +77,34 @@ public class UnitInitializerSystem : SystemBase
                     {
                         Entity defEntity = ecb.Instantiate(uic.prefabToSpawn);
                         float3 position = new float3(UnityEngine.Random.Range(0, 36), uic.baseOffset, 0) + uic.currentPosition; //value 36 based on the spawner position (-28,0,-47)
-                        bool covidValue = false;
-                        Material unitMaterial = UnitManager.instance.activeMaterial;
+                        bool hasCovid = false;
+                        Material unitMaterial = UnitManager.instance.healthyMoveMaterial;
 
                         ecb.SetComponent(defEntity, new Translation { Value = position });
                         ecb.AddComponent<UnitComponent>(defEntity);
                         ecb.AddComponent<PersonComponent>(defEntity);
                         ecb.AddComponent<CourseComponent>(defEntity);
                         ecb.AddBuffer<UnitBuffer>(defEntity);
-                        sb = ecb.AddBuffer<ScheduleBuffer>(defEntity);
+                        DynamicBuffer<ScheduleBuffer> sb = ecb.AddBuffer<ScheduleBuffer>(defEntity);
 
                         //select randomly a course from the available ones
-                        int selectedCourseId = availableCourses[GenerateInt(numberAvailableCourses)];
+                        int selectedCourseId = availableCoursesIds[GenerateInt(numberAvailableCourses)];
 
                         Course selectedCourse = courses[selectedCourseId];
                         currentCourse = selectedCourse.Id;
                         float3 currentDest;
                         float3 firstDest = 0;
 
-                        //add lessons to Schedule_Buffer
-                        for (int k = 0; k < selectedCourse.Lessons.Count; k++)
+                        //add lectures to Schedule_Buffer
+                        for (int k = 0; k < selectedCourse.Lectures.Count; k++)
                         {
-                            currentDest = FindDestination("Aula" + selectedCourse.Lessons[k].Room);
+                            currentDest = FindDestination("Aula" + selectedCourse.Lectures[k].Room);
                             if (k == 0)
                                 firstDest = currentDest;
                             sb.Add(new ScheduleBuffer
                             {
                                 destination = currentDest,
-                                duration = selectedCourse.Lessons[k].Duration
+                                duration = selectedCourse.Lectures[k].Duration
                             });
                         }
 
@@ -118,7 +113,7 @@ public class UnitInitializerSystem : SystemBase
                         {
                             destination = currentDest
                         });
-                        
+
                         UnitComponent uc = new UnitComponent
                         {
                             fromLocation = position,
@@ -131,23 +126,23 @@ public class UnitInitializerSystem : SystemBase
                         };
 
                         if (timeSlot == 1 && j == 0) //only the first entity in the first slot has covid to simulate what can be the infection
-                            covidValue = true;
+                            hasCovid = true;
 
                         CourseComponent courseComponent = new CourseComponent
                         {
                             id = selectedCourse.Id,
-                            lessonStart = selectedCourse.LessonStart
+                            lectureStart = selectedCourse.LectureStart
                         };
 
                         PersonComponent personComponent = new PersonComponent
                         {
                             age = GenerateInt(19, 30),
                             sex = GenerateSex(),
-                            hasCovid = covidValue
+                            hasCovid = hasCovid
                         };
 
-                        if (covidValue)
-                            unitMaterial = UnitManager.instance.covdMaterial;
+                        if (hasCovid)
+                            unitMaterial = UnitManager.instance.covidMoveMaterial;
 
                         ecb.AddSharedComponent(e, new RenderMesh
                         {
@@ -164,10 +159,7 @@ public class UnitInitializerSystem : SystemBase
         bi_ECB.AddJobHandleForProducer(Dependency);
 
     }
-    protected override void OnDestroy()
-    {
-        //courses.Dispose();
-    }
+
     private int GenerateInt(int v1, int v2)
     {
         return UnityEngine.Random.Range(v1, v2);
@@ -184,33 +176,33 @@ public class UnitInitializerSystem : SystemBase
         else
             return 'F';
     }
-    private List<Lesson> GenerateSchedule(out int lessonStart)
+    private List<Lecture> GenerateSchedule(out int lectureStart)
     {
-        List<Lesson> schedule = new List<Lesson>();
-        List<int> durationsForLessons = new List<int>();
+        List<Lecture> schedule = new List<Lecture>();
+        List<int> durationsForLectures = new List<int>();
 
-        lessonStart = GenerateInt(1, maxDayHours);
-        int maxSlots = maxDayHours - lessonStart;
+        lectureStart = GenerateInt(1, maxSlotsInSingleDay);
+        int maxScheduleSlotsDuration = maxSlotsInSingleDay - lectureStart;
         int singleDuration;
 
-        while (maxSlots != 0)
+        while (maxScheduleSlotsDuration != 0)
         {
             singleDuration = GenerateInt(1, 3); //the number of slots for each lecture is between 1 and 2 (1.5 or 3 hours)
-            if (maxSlots - singleDuration < 0)
+            if (maxScheduleSlotsDuration - singleDuration < 0)
             {
-                durationsForLessons.Add(maxSlots);
-                maxSlots = 0;
+                durationsForLectures.Add(maxScheduleSlotsDuration);
+                maxScheduleSlotsDuration = 0;
             }
             else
             {
-                durationsForLessons.Add(singleDuration);
-                maxSlots -= singleDuration;
+                durationsForLectures.Add(singleDuration);
+                maxScheduleSlotsDuration -= singleDuration;
             }
         }
 
-        int[] rooms = new int[durationsForLessons.Count];
+        int[] rooms = new int[durationsForLectures.Count];
 
-        for (int i = 0; i < durationsForLessons.Count; i++)
+        for (int i = 0; i < durationsForLectures.Count; i++)
         {
             rooms[i] = GenerateInt(1, numberOfRooms);
 
@@ -219,9 +211,9 @@ public class UnitInitializerSystem : SystemBase
                     rooms[i] = GenerateInt(1, numberOfRooms);
         }
 
-        for (int i = 0; i < durationsForLessons.Count; i++)
+        for (int i = 0; i < durationsForLectures.Count; i++)
         {
-            schedule.Add(new Lesson(rooms[i], durationsForLessons[i]));
+            schedule.Add(new Lecture(rooms[i], durationsForLectures[i]));
         }
 
         return schedule;
@@ -241,7 +233,7 @@ public class UnitInitializerSystem : SystemBase
     {
         float3 destination;
         destination = GameObject.Find(exit).GetComponent<Renderer>().bounds.center;
-        destination.x += GenerateInt(-10, 13); 
+        destination.x += GenerateInt(-10, 13);
         destination.z += GenerateInt(-3, 4);
         destination.y = 2f;
 

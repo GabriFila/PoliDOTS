@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Unity.Mathematics;
 
 namespace Assets.Scripts
 {
@@ -7,26 +6,28 @@ namespace Assets.Scripts
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public List<Lesson> Lessons { get; set; }
-        public int LessonStart { get; set; }
-        public Course(int id, string name, List<Lesson> lessons, int lessonStart)
+        public List<Lecture> Lectures { get; set; }
+        public int LectureStart { get; set; }
+        public Course(int id, string name, List<Lecture> lessons, int lessonStart)
         {
             Id = id;
             Name = name;
-            Lessons = lessons;
-            LessonStart = lessonStart;
+            Lectures = lessons;
+            LectureStart = lessonStart;
         }
     }
 
-    public struct Lesson
+    public struct Lecture
     {
         public int Room { get; set; }
         public int Duration { get; set; }
-        public Lesson(int room, int duration)
+        public Lecture(int room, int duration)
         {
             Room = room;
             Duration = duration;
         }
+
+
     }
 
     public enum CourseName
@@ -59,4 +60,6 @@ namespace Assets.Scripts
         Nanotechnologies,
         Nanotecnologie
     }
+
+
 }

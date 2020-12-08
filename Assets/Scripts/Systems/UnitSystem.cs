@@ -25,7 +25,7 @@ public class UnitSystem : SystemBase
     BeginInitializationEntityCommandBufferSystem bi_ECB;
 
     //---------------------- Collision Avoidance ---------------------------
-    
+
     public static NativeMultiHashMap<int, float3> cellVsEntityPositions;
 
     //---------------------- Collision Avoidance ---------------------------
@@ -276,7 +276,7 @@ public class UnitSystem : SystemBase
                                ecb.SetSharedComponent(e, new RenderMesh
                                {
                                    mesh = UnitManager.instance.unitMesh,
-                                   material = UnitManager.instance.covdMaterial
+                                   material = UnitManager.instance.covidMoveMaterial
                                });
 
                                pc.hasCovid = true;
@@ -315,7 +315,7 @@ public class UnitSystem : SystemBase
                            ecb.SetSharedComponent(e, new RenderMesh
                            {
                                mesh = UnitManager.instance.unitMesh,
-                               material = UnitManager.instance.waitMaterial
+                               material = pc.hasCovid ? UnitManager.instance.covidWaitMaterial : UnitManager.instance.healthyWaitMaterial
                            });
 
                        }
