@@ -27,7 +27,7 @@ public class UnitInitializerSystem : SystemBase
 
     protected override void OnCreate()
     { 
-        numberOfRooms = 11;
+        numberOfRooms = 30;
         maxDayHours = 7; 
         lessonStart = 0;
         timeSlot = 0;
@@ -98,15 +98,14 @@ public class UnitInitializerSystem : SystemBase
                         Course selectedCourse = courses[selectedCourseId];
                         currentCourse = selectedCourse.Id;
                         float3 currentDest;
+                        float3 firstDest = 0;
 
                         //add lessons to Schedule_Buffer
                         for (int k = 0; k < selectedCourse.Lessons.Count; k++)
                         {
-                            currentDest = GameObject.Find("Aula" + selectedCourse.Lessons[k].Room).GetComponent<Renderer>().bounds.center;
-                            currentDest.x += GenerateInt(-6, 7); //code to avoid all the entities to go toward to the same x point in room
-                            currentDest.z += GenerateInt(-6, 7); //code to avoid all the entities to go toward to the same z point in room
-                            currentDest.y = 2f;
-                            
+                            currentDest = FindDestination("Aula" + selectedCourse.Lessons[k].Room);
+                            if (k == 0)
+                                firstDest = currentDest;
                             sb.Add(new ScheduleBuffer
                             {
                                 destination = currentDest,
@@ -114,20 +113,16 @@ public class UnitInitializerSystem : SystemBase
                             });
                         }
 
+                        currentDest = FindExit("UscitaCastelidardo");
                         sb.Add(new ScheduleBuffer
                         {
-                            destination = position
+                            destination = currentDest
                         });
-
-                        currentDest = GameObject.Find("Aula" + selectedCourse.Lessons[0].Room).GetComponent<Renderer>().bounds.center;
-                        currentDest.x += GenerateInt(-6, 7);
-                        currentDest.z += GenerateInt(-6, 7);
-                        currentDest.y = 2f;
                         
                         UnitComponent uc = new UnitComponent
                         {
                             fromLocation = position,
-                            toLocation = currentDest,
+                            toLocation = firstDest,
                             speed = GenerateInt(uic.minSpeed, uic.maxSpeed),
                             minDistanceReached = uic.minDistanceReached,
                             count = 0,
@@ -230,5 +225,26 @@ public class UnitInitializerSystem : SystemBase
         }
 
         return schedule;
+    }
+    private float3 FindDestination(string roomName)
+    {
+        float3 destination = GameObject.Find(roomName).GetComponent<Renderer>().bounds.center;
+        float3 dimension = GameObject.Find(roomName).GetComponent<Renderer>().bounds.size;
+
+        destination.x += GenerateInt(-(int)dimension.x / 2, (int)dimension.x / 2);
+        destination.y = 2f;
+        destination.z += GenerateInt(-(int)dimension.z / 2, (int)dimension.z / 2);
+
+        return destination;
+    }
+    private float3 FindExit(string exit)
+    {
+        float3 destination;
+        destination = GameObject.Find(exit).GetComponent<Renderer>().bounds.center;
+        destination.x += GenerateInt(-10, 13); 
+        destination.z += GenerateInt(-3, 4);
+        destination.y = 2f;
+
+        return destination;
     }
 }
