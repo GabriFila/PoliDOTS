@@ -78,7 +78,7 @@ public class UnitSystem : SystemBase
         int i = 0, counter = 0;
 
         Entities.
-            WithNone<WaitComponent>().
+            //WithNone<WaitComponent>().
             WithoutBurst().
             WithStructuralChanges().
             ForEach((Entity e, ref UnitComponent uc, ref DynamicBuffer<UnitBuffer> ub, ref Translation trans, ref PersonComponent pc) =>
@@ -248,22 +248,13 @@ public class UnitSystem : SystemBase
                {
                    uc.waypointDirection = math.normalize(ub[uc.currentBufferIndex].wayPoints - trans.Value);
                    uc.avoidanceDirection.y = 0;
-                   uc.waypointDirection = uc.waypointDirection + uc.avoidanceDirection;
                    uc.waypointDirection.y = 0;
-
-                   newTrans.Value.y = 1.791667f;
-
-                   if (!UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 0.001f, NavMesh.AllAreas))
-                   {
-                       UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 1f, NavMesh.AllAreas);
-                       trans.Value.x = outResult.position.x;
-                       trans.Value.z = outResult.position.z;
-                   }
-
+                   uc.waypointDirection = uc.waypointDirection + uc.avoidanceDirection;
+                
                    newTrans.Value = trans.Value + uc.waypointDirection * uc.speed * deltaTime;
                    newTrans.Value.y = 1.791667f;
 
-                   if (!UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 0.001f, NavMesh.AllAreas))
+                   if (!UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 0.8f, NavMesh.AllAreas))
                    {
                        uc.waypointDirection -= uc.avoidanceDirection;
                    }
