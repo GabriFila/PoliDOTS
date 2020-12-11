@@ -6,6 +6,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Rendering;
 using Unity.Transforms;
+using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Experimental.AI;
 
@@ -21,6 +22,8 @@ public class UnitSystem : SystemBase
     private NavMeshWorld navMeshWorld;
     private List<JobHandle> jobHandles;
     private List<string> keys;
+    private int totalNumberOfStudents;
+    private int totalNumberOfCovid;
 
     BeginInitializationEntityCommandBufferSystem bi_ECB;
 
@@ -70,6 +73,8 @@ public class UnitSystem : SystemBase
 
     protected override void OnUpdate()
     {
+        totalNumberOfStudents = 0;
+        totalNumberOfCovid = 0;
         List<float3> covidPositions = new List<float3>();
 
         float deltaTime = Time.DeltaTime;
@@ -83,9 +88,13 @@ public class UnitSystem : SystemBase
             WithStructuralChanges().
             ForEach((Entity e, ref UnitComponent uc, ref DynamicBuffer<UnitBuffer> ub, ref Translation trans, ref PersonComponent pc) =>
             {
+                totalNumberOfStudents++;
 
                 if (pc.hasCovid)
+                {
                     covidPositions.Add(trans.Value);
+                    totalNumberOfCovid++;
+                }
 
                 if (i <= UnitManager.instance.maxEntitiesRoutedPerFrame)
                 {
@@ -235,6 +244,9 @@ public class UnitSystem : SystemBase
 
         //----------- Collision Avoidance Code -----------------
 
+        float contagionPercentageValue;
+        float covidPercentage;
+
         //Movement
         Entities
            .WithoutBurst()
@@ -262,15 +274,27 @@ public class UnitSystem : SystemBase
                    if (!pc.hasCovid)
                    {
                        foreach (float3 pos in covidPositions)
-                           if (math.abs(pos.x - trans.Value.x) < 0.5 && math.abs(pos.z - trans.Value.z) < 0.5)
+                           if (math.abs(pos.x - trans.Value.x) < UnitManager.instance.infectionDistance && math.abs(pos.z - trans.Value.z) < UnitManager.instance.infectionDistance)
                            {
-                               ecb.SetSharedComponent(e, new RenderMesh
-                               {
-                                   mesh = UnitManager.instance.unitMesh,
-                                   material = UnitManager.instance.covidMoveMaterial
-                               });
+                               contagionPercentageValue = UnityEngine.Random.Range(0, 100);
 
-                               pc.hasCovid = true;
+                               if (pc.wearMask)
+                                   covidPercentage = UnitManager.instance.percentageOfWearingMaskX100;
+                               else
+                                   covidPercentage = UnitManager.instance.percentageOfInfectionX100;
+
+                               if (contagionPercentageValue <= covidPercentage)
+                               {
+                                   totalNumberOfCovid++;
+
+                                   ecb.SetSharedComponent(e, new RenderMesh
+                                   {
+                                       mesh = UnitManager.instance.unitMesh,
+                                       material = UnitManager.instance.covidMoveMaterial
+                                   });
+
+                                   pc.hasCovid = true;
+                               }
                                break;
                            }
                    }
@@ -313,10 +337,17 @@ public class UnitSystem : SystemBase
                        else if (uc.count == sb.Length - 1)
                        {
                            ecb.DestroyEntity(e);
+                           totalNumberOfStudents--;
+
+                           if (pc.hasCovid)
+                               totalNumberOfCovid--;
                        }
                    }
                }
            }).Run();
+
+        UnitManager.instance.SetNumberOfStudents(totalNumberOfStudents);
+        UnitManager.instance.SetNumberOfCovid(totalNumberOfCovid);
     }
 
     protected override void OnDestroy()
