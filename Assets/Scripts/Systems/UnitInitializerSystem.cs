@@ -58,6 +58,8 @@ public class UnitInitializerSystem : SystemBase
             elapsedTime = 0;
             timeSlot++;
 
+            UnitManager.instance.SetCurrentSlotNumber(timeSlot);
+
             availableCoursesIds = new NativeArray<int>(CourseName.GetValues(typeof(CourseName)).Length, Allocator.Temp);
             int numberAvailableCourses = 0;
             for (int k = 0; k < courses.Count; k++)
@@ -78,6 +80,7 @@ public class UnitInitializerSystem : SystemBase
                         Entity defEntity = ecb.Instantiate(uic.prefabToSpawn);
                         float3 position = new float3(UnityEngine.Random.Range(0, 36), uic.baseOffset, 0) + uic.currentPosition; //value 36 based on the spawner position (-28,0,-47)
                         bool hasCovid = false;
+                        bool wearMask = false;
                         Material unitMaterial = UnitManager.instance.healthyMoveMaterial;
 
                         ecb.SetComponent(defEntity, new Translation { Value = position });
@@ -134,11 +137,15 @@ public class UnitInitializerSystem : SystemBase
                             lectureStart = selectedCourse.LectureStart
                         };
 
+                        if (UnityEngine.Random.Range(0, 100) <= UnitManager.instance.percentageOfWearingMaskX100)
+                            wearMask = true;
+
                         PersonComponent personComponent = new PersonComponent
                         {
                             age = GenerateInt(19, 30),
                             sex = GenerateSex(),
-                            hasCovid = hasCovid
+                            hasCovid = hasCovid,
+                            wearMask = wearMask
                         };
 
                         if (hasCovid)
