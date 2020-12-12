@@ -137,7 +137,7 @@ public class UnitInitializerSystem : SystemBase
                             lectureStart = selectedCourse.LectureStart
                         };
 
-                        if (UnityEngine.Random.Range(0, 100) <= UnitManager.instance.percentageOfWearingMaskX100)
+                        if (UnityEngine.Random.Range(0, 100) <= (UnitManager.instance.percentageOfWearingMask*100))
                             wearMask = true;
 
                         PersonComponent personComponent = new PersonComponent

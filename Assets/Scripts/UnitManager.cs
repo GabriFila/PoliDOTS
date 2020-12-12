@@ -9,9 +9,9 @@ public class UnitManager : MonoBehaviour
     public int maxIterations;
     public bool useCache;
     public int timeSlotDurationS;
-    public float percentageOfInfectionX100;
-    public float percentageOfInfectionWithMaskX100;
-    public float percentageOfWearingMaskX100;
+    public float percentageOfInfection;
+    public float percentageOfInfectionWithMask;
+    public float percentageOfWearingMask;
     public float infectionDistance;
     
     public Material healthyMoveMaterial;
@@ -55,8 +55,9 @@ public class UnitManager : MonoBehaviour
         GUI.Box(new Rect(10, 10, 250, 25), "Students inside POLITO : " + totNumberOfStudents);
         GUI.Box(new Rect(10, 35, 250, 25), "Exposed to COVID-19 : " + totNumberOfCovid);
         GUI.Box(new Rect(10, 60, 250, 25), "Current timeslot : " + currentSlotNumber + "/7");
-        GUI.Box(new Rect(10, 85, 250, 25), "Risk of infection : " + percentageOfInfectionX100);
-        GUI.Box(new Rect(10, 110, 250, 25), "Risk of infection with mask : " + percentageOfInfectionWithMaskX100);
+        GUI.Box(new Rect(10, 85, 250, 25), "Risk of infection : " + percentageOfInfection * 100 + "%");
+        GUI.Box(new Rect(10, 110, 250, 25), "Risk of infection with mask : " + percentageOfInfectionWithMask * 100 + "%");
+        GUI.Box(new Rect(10, 135, 250, 25), "Probability of wearing mask : " + percentageOfWearingMask * 100 + "%");
 
         GUI.skin.box.fontSize = 15;
     }

@@ -279,9 +279,9 @@ public class UnitSystem : SystemBase
                                contagionPercentageValue = UnityEngine.Random.Range(0, 100);
 
                                if (pc.wearMask)
-                                   covidPercentage = UnitManager.instance.percentageOfWearingMaskX100;
+                                   covidPercentage = UnitManager.instance.percentageOfWearingMask * 100;
                                else
-                                   covidPercentage = UnitManager.instance.percentageOfInfectionX100;
+                                   covidPercentage = UnitManager.instance.percentageOfInfection * 100;
 
                                if (contagionPercentageValue <= covidPercentage)
                                {
