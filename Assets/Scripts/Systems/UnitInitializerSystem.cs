@@ -53,12 +53,12 @@ public class UnitInitializerSystem : SystemBase
         var ecb = bi_ECB.CreateCommandBuffer();
         elapsedTime += Time.DeltaTime;
         //spawn units when sim starts and every if another slot has passed and there are still some courses beginning in a later slot i enter the lambda
-        if (timeSlot == 0 || (elapsedTime > UnitManager.instance.timeSlotDurationS && timeSlot <= lastSlot))
+        if (timeSlot == 0 || (elapsedTime > UnitManager.Instance.timeSlotDurationS && timeSlot <= lastSlot))
         {
             elapsedTime = 0;
             timeSlot++;
 
-            UnitManager.instance.SetCurrentSlotNumber(timeSlot);
+            UnitManager.Instance.SetCurrentSlotNumber(timeSlot);
 
             availableCoursesIds = new NativeArray<int>(CourseName.GetValues(typeof(CourseName)).Length, Allocator.Temp);
             int numberAvailableCourses = 0;
@@ -81,7 +81,7 @@ public class UnitInitializerSystem : SystemBase
                         float3 position = new float3(UnityEngine.Random.Range(0, 36), uic.baseOffset, 0) + uic.currentPosition; //value 36 based on the spawner position (-28,0,-47)
                         bool hasCovid = false;
                         bool wearMask = false;
-                        Material unitMaterial = UnitManager.instance.healthyMoveMaterial;
+                        Material unitMaterial = UnitManager.Instance.healthyMoveMaterial;
 
                         ecb.SetComponent(defEntity, new Translation { Value = position });
                         ecb.AddComponent<UnitComponent>(defEntity);
@@ -137,7 +137,7 @@ public class UnitInitializerSystem : SystemBase
                             lectureStart = selectedCourse.LectureStart
                         };
 
-                        if (UnityEngine.Random.Range(0, 100) <= (UnitManager.instance.percentageOfWearingMask*100))
+                        if (UnityEngine.Random.Range(0, 100) <= (UnitManager.Instance.probabilityOfWearingMask * 100))
                             wearMask = true;
 
                         PersonComponent personComponent = new PersonComponent
@@ -149,11 +149,11 @@ public class UnitInitializerSystem : SystemBase
                         };
 
                         if (hasCovid)
-                            unitMaterial = UnitManager.instance.covidMoveMaterial;
+                            unitMaterial = UnitManager.Instance.covidMoveMaterial;
 
                         ecb.AddSharedComponent(e, new RenderMesh
                         {
-                            mesh = UnitManager.instance.unitMesh,
+                            mesh = UnitManager.Instance.unitMesh,
                             material = unitMaterial
                         });
 

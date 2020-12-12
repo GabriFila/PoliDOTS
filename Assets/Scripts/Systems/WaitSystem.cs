@@ -26,7 +26,7 @@ public class WaitSystem : SystemBase
             .ForEach((Entity e, int entityInQueryIndex, ref WaitComponent wc, ref PersonComponent pc) =>
             {
                 if (wc.waitEndTime == 0)
-                    wc.waitEndTime = currentUnixTimeS + wc.slotsToWait * UnitManager.instance.timeSlotDurationS;
+                    wc.waitEndTime = currentUnixTimeS + wc.slotsToWait * UnitManager.Instance.timeSlotDurationS;
                 else if (currentUnixTimeS > wc.waitEndTime)
                 {
                     ecb.RemoveComponent<WaitComponent>(entityInQueryIndex, e);
@@ -35,13 +35,13 @@ public class WaitSystem : SystemBase
                     Material unitMaterial;
 
                     if (pc.hasCovid)
-                        unitMaterial = UnitManager.instance.covidMoveMaterial;
+                        unitMaterial = UnitManager.Instance.covidMoveMaterial;
                     else
-                        unitMaterial = UnitManager.instance.healthyMoveMaterial;
+                        unitMaterial = UnitManager.Instance.healthyMoveMaterial;
 
                     ecb.SetSharedComponent(entityInQueryIndex, e, new RenderMesh
                     {
-                        mesh = UnitManager.instance.unitMesh,
+                        mesh = UnitManager.Instance.unitMesh,
                         material = unitMaterial
                     });
                 }

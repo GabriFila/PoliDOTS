@@ -96,12 +96,12 @@ public class UnitSystem : SystemBase
                     totalNumberOfCovid++;
                 }
 
-                if (i <= UnitManager.instance.maxEntitiesRoutedPerFrame)
+                if (i <= UnitManager.Instance.maxEntitiesRoutedPerFrame)
                 {
                     string key = uc.fromLocation.x + "_" + uc.fromLocation.z + "_" + uc.toLocation.x + "_" + uc.toLocation.z;
 
                     //Cached path
-                    if (UnitManager.instance.useCache && allPaths.ContainsKey(key) && (!uc.routed || ub.Length == 0))
+                    if (UnitManager.Instance.useCache && allPaths.ContainsKey(key) && (!uc.routed || ub.Length == 0))
                     {
                         allPaths.TryGetValue(key, out float3[] cachedPath);
                         for (int h = 0; h < cachedPath.Length; h++)
@@ -118,7 +118,7 @@ public class UnitSystem : SystemBase
                     {
                         keys[counter] = key;
 
-                        NavMeshQuery currentQuery = new NavMeshQuery(navMeshWorld, Allocator.Persistent, UnitManager.instance.maxPathNodePoolSize);
+                        NavMeshQuery currentQuery = new NavMeshQuery(navMeshWorld, Allocator.Persistent, UnitManager.Instance.maxPathNodePoolSize);
                         SinglePathFindingJob spfj = new SinglePathFindingJob()
                         {
                             query = currentQuery,
@@ -127,10 +127,10 @@ public class UnitSystem : SystemBase
                             fromLocation = uc.fromLocation,
                             toLocation = uc.toLocation,
                             extents = extents,
-                            maxIteration = UnitManager.instance.maxIterations,
+                            maxIteration = UnitManager.Instance.maxIterations,
                             result = results[counter],
                             statusOutput = statusOutputs[counter],
-                            maxPathSize = UnitManager.instance.maxPathSize,
+                            maxPathSize = UnitManager.Instance.maxPathSize,
                             ub = ub
                         };
                         routedEntities.Add(e);
@@ -162,7 +162,7 @@ public class UnitSystem : SystemBase
         {
             if (statusOutputs[j][0] == 1)
             {
-                if (UnitManager.instance.useCache && !allPaths.ContainsKey(keys[j]))
+                if (UnitManager.Instance.useCache && !allPaths.ContainsKey(keys[j]))
                 {
                     float3[] wayPoints = new float3[statusOutputs[j][1]];
                     for (int k = 0; k < statusOutputs[j][1]; k++)
@@ -274,14 +274,14 @@ public class UnitSystem : SystemBase
                    if (!pc.hasCovid)
                    {
                        foreach (float3 pos in covidPositions)
-                           if (math.abs(pos.x - trans.Value.x) < UnitManager.instance.infectionDistance && math.abs(pos.z - trans.Value.z) < UnitManager.instance.infectionDistance)
+                           if (math.abs(pos.x - trans.Value.x) < UnitManager.Instance.infectionDistance && math.abs(pos.z - trans.Value.z) < UnitManager.Instance.infectionDistance)
                            {
                                contagionPercentageValue = UnityEngine.Random.Range(0, 100);
 
                                if (pc.wearMask)
-                                   covidPercentage = UnitManager.instance.percentageOfWearingMask * 100;
+                                   covidPercentage = UnitManager.Instance.probabilityOfWearingMask * 100;
                                else
-                                   covidPercentage = UnitManager.instance.percentageOfInfection * 100;
+                                   covidPercentage = UnitManager.Instance.probabilityOfInfection * 100;
 
                                if (contagionPercentageValue <= covidPercentage)
                                {
@@ -289,8 +289,8 @@ public class UnitSystem : SystemBase
 
                                    ecb.SetSharedComponent(e, new RenderMesh
                                    {
-                                       mesh = UnitManager.instance.unitMesh,
-                                       material = UnitManager.instance.covidMoveMaterial
+                                       mesh = UnitManager.Instance.unitMesh,
+                                       material = UnitManager.Instance.covidMoveMaterial
                                    });
 
                                    pc.hasCovid = true;
@@ -329,8 +329,8 @@ public class UnitSystem : SystemBase
 
                            ecb.SetSharedComponent(e, new RenderMesh
                            {
-                               mesh = UnitManager.instance.unitMesh,
-                               material = pc.hasCovid ? UnitManager.instance.covidWaitMaterial : UnitManager.instance.healthyWaitMaterial
+                               mesh = UnitManager.Instance.unitMesh,
+                               material = pc.hasCovid ? UnitManager.Instance.covidWaitMaterial : UnitManager.Instance.healthyWaitMaterial
                            });
 
                        }
@@ -346,15 +346,15 @@ public class UnitSystem : SystemBase
                }
            }).Run();
 
-        UnitManager.instance.SetNumberOfStudents(totalNumberOfStudents);
-        UnitManager.instance.SetNumberOfCovid(totalNumberOfCovid);
+        UnitManager.Instance.SetNumberOfStudents(totalNumberOfStudents);
+        UnitManager.Instance.SetNumberOfCovid(totalNumberOfCovid);
     }
 
     protected override void OnDestroy()
     {
         cellVsEntityPositions.Dispose();
 
-        for (int n = 0; n <= UnitManager.instance.maxEntitiesRoutedPerFrame; n++)
+        for (int n = 0; n <= UnitManager.Instance.maxEntitiesRoutedPerFrame; n++)
         {
             statusOutputs[n].Dispose();
             results[n].Dispose();

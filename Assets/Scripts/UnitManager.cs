@@ -2,16 +2,16 @@
 
 public class UnitManager : MonoBehaviour
 {
-    public static UnitManager instance { get; private set; }
+    public static UnitManager Instance { get; private set; }
     public int maxPathSize;
     public int maxEntitiesRoutedPerFrame;
     public int maxPathNodePoolSize;
     public int maxIterations;
     public bool useCache;
     public int timeSlotDurationS;
-    public float percentageOfInfection;
-    public float percentageOfInfectionWithMask;
-    public float percentageOfWearingMask;
+    public float probabilityOfInfection;
+    public float probabilityOfInfectionWithMask;
+    public float probabilityOfWearingMask;
     public float infectionDistance;
     
     public Material healthyMoveMaterial;
@@ -23,7 +23,14 @@ public class UnitManager : MonoBehaviour
     private int totNumberOfStudents;
     private int totNumberOfCovid;
     private int currentSlotNumber;
-   
+    private float percentageOfInfected;
+
+    private int boxHeight;
+    private int boxWidth;
+    private int padding;
+    private int boxXPosition;
+    private int boxYPosition;
+
     public void SetNumberOfStudents(int totNumberOfStudents)
     {
         this.totNumberOfStudents = totNumberOfStudents;
@@ -40,9 +47,9 @@ public class UnitManager : MonoBehaviour
 
     private void Awake()
     {
-        if (instance == null)
+        if (Instance == null)
         {
-            instance = this;
+            Instance = this;
             DontDestroyOnLoad(gameObject);
         }
         else
@@ -52,14 +59,28 @@ public class UnitManager : MonoBehaviour
     }
     public void OnGUI()
     {
-        GUI.Box(new Rect(10, 10, 250, 25), "Students inside POLITO : " + totNumberOfStudents);
-        GUI.Box(new Rect(10, 35, 250, 25), "Exposed to COVID-19 : " + totNumberOfCovid);
-        GUI.Box(new Rect(10, 60, 250, 25), "Current timeslot : " + currentSlotNumber + "/7");
-        GUI.Box(new Rect(10, 85, 250, 25), "Risk of infection : " + percentageOfInfection * 100 + "%");
-        GUI.Box(new Rect(10, 110, 250, 25), "Risk of infection with mask : " + percentageOfInfectionWithMask * 100 + "%");
-        GUI.Box(new Rect(10, 135, 250, 25), "Probability of wearing mask : " + percentageOfWearingMask * 100 + "%");
+        padding = 2;
+        boxWidth = Screen.width / 4;
+        boxHeight = Screen.height / 20;
 
-        GUI.skin.box.fontSize = 15;
+        boxXPosition = 5;
+        boxYPosition = Screen.height - 40;
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Percentage of students with a mask : " + probabilityOfWearingMask * 100 + "%");
+        boxYPosition -= (boxHeight + padding); 
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Risk of infection with mask : " + probabilityOfInfectionWithMask * 100 + "%");
+        boxYPosition -= (boxHeight + padding);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Risk of infection : " + probabilityOfInfection * 100 + "%");
+        boxYPosition -= (boxHeight + padding);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot : " + currentSlotNumber + "/7");
+        boxYPosition -= (boxHeight + padding);
+        percentageOfInfected = (totNumberOfCovid * 100 / totNumberOfStudents);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Percentage of exposed students : " + percentageOfInfected + "%");
+        boxYPosition -= (boxHeight + padding);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Exposed to COVID-19 : " + totNumberOfCovid);
+        boxYPosition -= (boxHeight + padding);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Students inside POLITO : " + totNumberOfStudents);
+
+        GUI.skin.box.fontSize = boxHeight / 2;
     }
 
 }
