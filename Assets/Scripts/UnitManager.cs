@@ -80,7 +80,7 @@ public class UnitManager : MonoBehaviour
         boxYPosition -= (boxHeight + padding);
         GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Students inside POLITO : " + totNumberOfStudents);
 
-        GUI.skin.box.fontSize = boxHeight / 2;
+        GUI.skin.box.fontSize = boxWidth / 20;
     }
 
 }
