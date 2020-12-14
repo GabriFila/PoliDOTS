@@ -11,6 +11,7 @@ public class UnitInitializerSystem : SystemBase
 {
     BeginInitializationEntityCommandBufferSystem bi_ECB;
     public float elapsedTime;
+    public double timeForOneSecond;
     public int timeSlot;
     public List<Course> courses;
     public int currentCourse;
@@ -52,6 +53,16 @@ public class UnitInitializerSystem : SystemBase
     {
         var ecb = bi_ECB.CreateCommandBuffer();
         elapsedTime += Time.DeltaTime;
+        timeForOneSecond += Time.DeltaTime;
+        int numOfSeconds = 0;
+
+        if(timeForOneSecond >= 0.00277777777)
+        {
+            numOfSeconds = (int)(timeForOneSecond /0.00277777777);
+            UnitManager.Instance.UpdateSeconds(numOfSeconds);
+            timeForOneSecond = timeForOneSecond % 0.00277777777;
+        }
+
         //spawn units when sim starts and every if another slot has passed and there are still some courses beginning in a later slot i enter the lambda
         if (timeSlot == 0 || (elapsedTime > UnitManager.Instance.timeSlotDurationS && timeSlot <= lastSlot))
         {

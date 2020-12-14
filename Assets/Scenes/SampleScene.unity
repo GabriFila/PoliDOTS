@@ -22048,9 +22048,9 @@ MonoBehaviour:
   maxIterations: 1024
   useCache: 1
   timeSlotDurationS: 15
-  probabilityOfInfection: 70
-  probabilityOfInfectionWithMask: 30
-  probabilityOfWearingMask: 50
+  probabilityOfInfection: 0.7
+  probabilityOfInfectionWithMask: 0.3
+  probabilityOfWearingMask: 0.5
   infectionDistance: 0.5
   healthyMoveMaterial: {fileID: 2100000, guid: 223d8b59a750bae4eaaa541919067966, type: 2}
   healthyWaitMaterial: {fileID: 2100000, guid: ad26f0bfdf3fde945a53e2745ae529b6, type: 2}

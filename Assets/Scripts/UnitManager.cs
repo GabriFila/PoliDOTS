@@ -30,6 +30,7 @@ public class UnitManager : MonoBehaviour
     private int padding;
     private int boxXPosition;
     private int boxYPosition;
+    private int seconds = 30600;
 
     public void SetNumberOfStudents(int totNumberOfStudents)
     {
@@ -43,6 +44,11 @@ public class UnitManager : MonoBehaviour
     public void SetCurrentSlotNumber(int currentSlotNumber)
     {
         this.currentSlotNumber = currentSlotNumber;
+    }
+
+    public void UpdateSeconds(int numOfSeconds)
+    {
+        seconds += numOfSeconds;
     }
 
     private void Awake()
@@ -63,6 +69,9 @@ public class UnitManager : MonoBehaviour
         boxWidth = Screen.width / 4;
         boxHeight = Screen.height / 20;
 
+        int hours = seconds / 3600;
+        int minutes = (seconds % 3600) / 60;
+
         boxXPosition = 5;
         boxYPosition = Screen.height - 40;
         GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Percentage of students with a mask : " + probabilityOfWearingMask * 100 + "%");
@@ -72,6 +81,11 @@ public class UnitManager : MonoBehaviour
         GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Risk of infection : " + probabilityOfInfection * 100 + "%");
         boxYPosition -= (boxHeight + padding);
         GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot : " + currentSlotNumber + "/7");
+        boxYPosition -= (boxHeight + padding);
+        if(minutes < 10)
+            GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot(hour) : " + hours + " : 0" + minutes);
+        else
+            GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot(hour) : " + hours + " : " + minutes);
         boxYPosition -= (boxHeight + padding);
         percentageOfInfected = (totNumberOfCovid * 100 / totNumberOfStudents);
         GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Percentage of exposed students : " + percentageOfInfected + "%");
