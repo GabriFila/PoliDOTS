@@ -55,12 +55,13 @@ public class UnitInitializerSystem : SystemBase
         elapsedTime += Time.DeltaTime;
         timeForOneSecond += Time.DeltaTime;
         int numOfSeconds = 0;
+        double oneSecond = (double)UnitManager.Instance.timeSlotDurationS /(double)(60 * 60 + 60 * 30);
 
-        if(timeForOneSecond >= 0.00277777777)
+        if(timeForOneSecond >= oneSecond)
         {
-            numOfSeconds = (int)(timeForOneSecond /0.00277777777);
+            numOfSeconds = (int)(timeForOneSecond /oneSecond);
             UnitManager.Instance.UpdateSeconds(numOfSeconds);
-            timeForOneSecond = timeForOneSecond % 0.00277777777;
+            timeForOneSecond = timeForOneSecond % oneSecond;
         }
 
         //spawn units when sim starts and every if another slot has passed and there are still some courses beginning in a later slot i enter the lambda
