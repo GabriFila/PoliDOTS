@@ -6,7 +6,6 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Rendering;
 using Unity.Transforms;
-using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Experimental.AI;
 
@@ -262,7 +261,7 @@ public class UnitSystem : SystemBase
                    uc.avoidanceDirection.y = 0;
                    uc.waypointDirection.y = 0;
                    uc.waypointDirection = uc.waypointDirection + uc.avoidanceDirection;
-                
+
                    newTrans.Value = trans.Value + uc.waypointDirection * uc.speed * deltaTime;
                    newTrans.Value.y = 1.791667f;
 
@@ -323,7 +322,7 @@ public class UnitSystem : SystemBase
                            ecb.RemoveComponent<UnitRouted>(e);
                            ecb.AddComponent(e, new WaitComponent
                            {
-                               slotsToWait = sb[uc.count].duration,
+                               slotsToWait = sb[uc.count - 1].duration,
                                waitEndTime = 0
                            });
 
@@ -346,7 +345,7 @@ public class UnitSystem : SystemBase
                }
            }).Run();
 
-        UnitManager.Instance.SetNumberOfStudents(totalNumberOfStudents);
+        UnitManager.Instance.totNumberOfStudents = totalNumberOfStudents;
         UnitManager.Instance.SetNumberOfCovid(totalNumberOfCovid);
     }
 

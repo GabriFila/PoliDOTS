@@ -26,8 +26,8 @@ public class UnitInitializerSystem : SystemBase
 
     protected override void OnCreate()
     {
-        numberOfRooms = 30;
         maxSlotsInSingleDay = 7;
+        numberOfRooms = 30;
         int lectureStart;
         timeSlot = 0;
 
@@ -43,8 +43,20 @@ public class UnitInitializerSystem : SystemBase
             if (lastSlot < lectureStart)
                 lastSlot = lectureStart;
             courses.Add(new Course(count, CourseName.GetValues(typeof(CourseName)).GetValue(count).ToString(), lectures, lectureStart));
+            Debug.Log(lectureStart + " - " + lectures.Count);
         }
 
+        //for (int i = 0; i < numberOfCourses; i++)
+        //{
+        //    string toP = i + ": ";
+        //    for (int j = 0; j < courses[i].Lectures.Count; j++)
+        //    {
+        //        toP += courses[i].Lectures[j].Duration + ", ";
+        //    }
+
+        //    Debug.Log(toP);
+
+        //}
         bi_ECB = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
         elapsedTime = 0;
     }
@@ -55,11 +67,11 @@ public class UnitInitializerSystem : SystemBase
         elapsedTime += Time.DeltaTime;
         timeForOneSecond += Time.DeltaTime;
         int numOfSeconds = 0;
-        double oneSecond = (double)UnitManager.Instance.timeSlotDurationS /(double)(60 * 60 + 60 * 30);
+        double oneSecond = (double)UnitManager.Instance.timeSlotDurationS / (double)(60 * 60 + 60 * 30);
 
-        if(timeForOneSecond >= oneSecond)
+        if (timeForOneSecond >= oneSecond)
         {
-            numOfSeconds = (int)(timeForOneSecond /oneSecond);
+            numOfSeconds = (int)(timeForOneSecond / oneSecond);
             UnitManager.Instance.UpdateSeconds(numOfSeconds);
             timeForOneSecond = timeForOneSecond % oneSecond;
         }
@@ -70,7 +82,7 @@ public class UnitInitializerSystem : SystemBase
             elapsedTime = 0;
             timeSlot++;
 
-            UnitManager.Instance.SetCurrentSlotNumber(timeSlot);
+            UnitManager.Instance.currentSlotNumber = timeSlot;
 
             availableCoursesIds = new NativeArray<int>(CourseName.GetValues(typeof(CourseName)).Length, Allocator.Temp);
             int numberAvailableCourses = 0;
@@ -113,6 +125,7 @@ public class UnitInitializerSystem : SystemBase
                         //add lectures to Schedule_Buffer
                         for (int k = 0; k < selectedCourse.Lectures.Count; k++)
                         {
+                            Debug.Log("Init:" + (selectedCourse.Lectures[k].Duration == 0));
                             currentDest = FindDestination("Aula" + selectedCourse.Lectures[k].Room);
                             if (k == 0)
                                 firstDest = currentDest;
@@ -126,9 +139,9 @@ public class UnitInitializerSystem : SystemBase
                         currentDest = FindExit("UscitaCastelidardo");
                         sb.Add(new ScheduleBuffer
                         {
-                            destination = currentDest
+                            destination = currentDest,
+                            duration = -1
                         });
-
                         UnitComponent uc = new UnitComponent
                         {
                             fromLocation = position,
@@ -200,8 +213,9 @@ public class UnitInitializerSystem : SystemBase
         List<Lecture> schedule = new List<Lecture>();
         List<int> durationsForLectures = new List<int>();
 
+        // a lecture can start in the last slot of a day
         lectureStart = GenerateInt(1, maxSlotsInSingleDay);
-        int maxScheduleSlotsDuration = maxSlotsInSingleDay - lectureStart;
+        int maxScheduleSlotsDuration = maxSlotsInSingleDay - lectureStart; // even the last lecture can last 1 slot
         int singleDuration;
 
         while (maxScheduleSlotsDuration != 0)
@@ -210,7 +224,7 @@ public class UnitInitializerSystem : SystemBase
             if (maxScheduleSlotsDuration - singleDuration < 0)
             {
                 durationsForLectures.Add(maxScheduleSlotsDuration);
-                maxScheduleSlotsDuration = 0;
+                break;
             }
             else
             {

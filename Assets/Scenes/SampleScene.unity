@@ -2722,8 +2722,8 @@ MonoBehaviour:
     x: -28
     y: 0
     z: -47
-  minSpeed: 10
-  maxSpeed: 11
+  minSpeed: 25
+  maxSpeed: 26
   minDistanceReached: 0.25
   seed: 15
 --- !u!114 &12802439
@@ -22047,7 +22047,7 @@ MonoBehaviour:
   maxPathNodePoolSize: 1024
   maxIterations: 1024
   useCache: 1
-  timeSlotDurationS: 15
+  timeSlotDurationS: 30
   probabilityOfInfection: 0.7
   probabilityOfInfectionWithMask: 0.3
   probabilityOfWearingMask: 0.5

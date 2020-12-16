@@ -20,13 +20,20 @@ public class WaitSystem : SystemBase
 
         long currentUnixTimeS = ((DateTimeOffset)DateTime.Now).ToUnixTimeSeconds();
         long slotDuration = timeSlotDurationMs;
-
+        long el = (long)Time.ElapsedTime;
         Entities
             .WithoutBurst()
             .ForEach((Entity e, int entityInQueryIndex, ref WaitComponent wc, ref PersonComponent pc) =>
             {
+                if (wc.slotsToWait == 0)
+                    Debug.Log("AAAAAAAAAAAAAAAAAAA");
                 if (wc.waitEndTime == 0)
-                    wc.waitEndTime = currentUnixTimeS + wc.slotsToWait * UnitManager.Instance.timeSlotDurationS;
+                {
+                    // time when current slot started
+                    int rem = ((UnitManager.Instance.currentSlotNumber - 1) * UnitManager.Instance.timeSlotDurationS);
+                    // time to end (timeSLot duration - delay adjustment)
+                    wc.waitEndTime = currentUnixTimeS + wc.slotsToWait * UnitManager.Instance.timeSlotDurationS - (el - rem);
+                }
                 else if (currentUnixTimeS > wc.waitEndTime)
                 {
                     ecb.RemoveComponent<WaitComponent>(entityInQueryIndex, e);
