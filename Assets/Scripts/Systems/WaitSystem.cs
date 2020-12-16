@@ -25,8 +25,6 @@ public class WaitSystem : SystemBase
             .WithoutBurst()
             .ForEach((Entity e, int entityInQueryIndex, ref WaitComponent wc, ref PersonComponent pc) =>
             {
-                if (wc.slotsToWait == 0)
-                    Debug.Log("AAAAAAAAAAAAAAAAAAA");
                 if (wc.waitEndTime == 0)
                 {
                     // time when current slot started

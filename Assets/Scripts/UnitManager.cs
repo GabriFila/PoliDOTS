@@ -65,13 +65,16 @@ public class UnitManager : MonoBehaviour
 
         boxXPosition = 5;
         boxYPosition = Screen.height - 40;
-        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Percentage of students with a mask : " + probabilityOfWearingMask * 100 + "%");
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Probability of students with a mask : " + probabilityOfWearingMask * 100 + "%");
         boxYPosition -= (boxHeight + padding);
         GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Risk of infection with mask : " + probabilityOfInfectionWithMask * 100 + "%");
         boxYPosition -= (boxHeight + padding);
         GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Risk of infection : " + probabilityOfInfection * 100 + "%");
         boxYPosition -= (boxHeight + padding);
-        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot : " + currentSlotNumber + "/7");
+        if (currentSlotNumber <= 7)
+            GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot : " + currentSlotNumber + "/7");
+        else
+            GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot : end of the day ");
         boxYPosition -= (boxHeight + padding);
         if (minutes < 10)
             GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot(hour) : " + hours + " : 0" + minutes);

@@ -21,6 +21,8 @@ public class UnitInitializerSystem : SystemBase
 
     public int numberOfRooms;
     public int maxSlotsInSingleDay;
+    public int courseComponent0 = 0;
+    public int totCourses = 0;
 
     NativeArray<int> availableCoursesIds;
 
@@ -34,29 +36,32 @@ public class UnitInitializerSystem : SystemBase
         numberOfCourses = CourseName.GetValues(typeof(CourseName)).Length;
         courses = new List<Course>();
         lastSlot = 0;
+        int totDuration = 0;
 
         List<Lecture> lectures;
         for (int count = 0; count < numberOfCourses; count++)
         {
             lectures = GenerateSchedule(out lectureStart);
 
+            totDuration = 0;
+
             if (lastSlot < lectureStart)
                 lastSlot = lectureStart;
             courses.Add(new Course(count, CourseName.GetValues(typeof(CourseName)).GetValue(count).ToString(), lectures, lectureStart));
-            Debug.Log(lectureStart + " - " + lectures.Count);
+
+            for (int k = 0; k < courses[count].Lectures.Count; k++)
+                totDuration += courses[count].Lectures[k].Duration;
+
+            Debug.Log("Course " + (count+1) + " : lectures start : " + lectureStart + " , lectures end : " + (lectureStart+totDuration) + " , num lectures : " + lectures.Count);
+
+            int startL = lectureStart;
+            for (int k = 0; k < courses[count].Lectures.Count; k++) {
+                Debug.Log("lectures " + (k + 1) + " start : " + startL + " , end : " + (startL + courses[count].Lectures[k].Duration));
+                startL += courses[count].Lectures[k].Duration;
+            }
+
         }
 
-        //for (int i = 0; i < numberOfCourses; i++)
-        //{
-        //    string toP = i + ": ";
-        //    for (int j = 0; j < courses[i].Lectures.Count; j++)
-        //    {
-        //        toP += courses[i].Lectures[j].Duration + ", ";
-        //    }
-
-        //    Debug.Log(toP);
-
-        //}
         bi_ECB = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
         elapsedTime = 0;
     }
@@ -95,98 +100,109 @@ public class UnitInitializerSystem : SystemBase
                 }
             }
 
-            Entities
-                .WithoutBurst()
-                .ForEach((Entity e, int entityInQueryIndex, in UnitInitializerComponent uic, in LocalToWorld ltw) =>
-                {
-                    for (int j = 0; j < uic.numEntitiesToSpawn; j++)
+            totCourses += numberAvailableCourses;
+
+            if (numberAvailableCourses != 0)
+            {
+
+                Entities
+                    .WithoutBurst()
+                    .ForEach((Entity e, int entityInQueryIndex, in UnitInitializerComponent uic, in LocalToWorld ltw) =>
                     {
-                        Entity defEntity = ecb.Instantiate(uic.prefabToSpawn);
-                        float3 position = new float3(UnityEngine.Random.Range(0, 36), uic.baseOffset, 0) + uic.currentPosition; //value 36 based on the spawner position (-28,0,-47)
-                        bool hasCovid = false;
-                        bool wearMask = false;
-                        Material unitMaterial = UnitManager.Instance.healthyMoveMaterial;
-
-                        ecb.SetComponent(defEntity, new Translation { Value = position });
-                        ecb.AddComponent<UnitComponent>(defEntity);
-                        ecb.AddComponent<PersonComponent>(defEntity);
-                        ecb.AddComponent<CourseComponent>(defEntity);
-                        ecb.AddBuffer<UnitBuffer>(defEntity);
-                        DynamicBuffer<ScheduleBuffer> sb = ecb.AddBuffer<ScheduleBuffer>(defEntity);
-
-                        //select randomly a course from the available ones
-                        int selectedCourseId = availableCoursesIds[GenerateInt(numberAvailableCourses)];
-
-                        Course selectedCourse = courses[selectedCourseId];
-                        currentCourse = selectedCourse.Id;
-                        float3 currentDest;
-                        float3 firstDest = 0;
-
-                        //add lectures to Schedule_Buffer
-                        for (int k = 0; k < selectedCourse.Lectures.Count; k++)
+                        for (int j = 0; j < uic.numEntitiesToSpawn; j++)
                         {
-                            Debug.Log("Init:" + (selectedCourse.Lectures[k].Duration == 0));
-                            currentDest = FindDestination("Aula" + selectedCourse.Lectures[k].Room);
-                            if (k == 0)
-                                firstDest = currentDest;
+                            Entity defEntity = ecb.Instantiate(uic.prefabToSpawn);
+                            float3 position = new float3(UnityEngine.Random.Range(0, 36), uic.baseOffset, 0) + uic.currentPosition; //value 36 based on the spawner position (-28,0,-47)
+                            bool hasCovid = false;
+                            bool wearMask = false;
+                            Material unitMaterial = UnitManager.Instance.healthyMoveMaterial;
+
+                            ecb.SetComponent(defEntity, new Translation { Value = position });
+                            ecb.AddComponent<UnitComponent>(defEntity);
+                            ecb.AddComponent<PersonComponent>(defEntity);
+                            ecb.AddComponent<CourseComponent>(defEntity);
+                            ecb.AddBuffer<UnitBuffer>(defEntity);
+                            DynamicBuffer<ScheduleBuffer> sb = ecb.AddBuffer<ScheduleBuffer>(defEntity);
+
+                            //select randomly a course from the available ones
+                            int selectedCourseId = availableCoursesIds[GenerateInt(numberAvailableCourses)];
+
+                            Course selectedCourse = courses[selectedCourseId];
+                            currentCourse = selectedCourse.Id;
+                            float3 currentDest;
+                            float3 firstDest = 0;
+
+                            //add lectures to Schedule_Buffer
+                            for (int k = 0; k < selectedCourse.Lectures.Count; k++)
+                            {
+                                //Debug.Log("Init:" + (selectedCourse.Lectures[k].Duration == 0));
+                                currentDest = FindDestination("Aula" + selectedCourse.Lectures[k].Room);
+                                if (k == 0)
+                                    firstDest = currentDest;
+                                sb.Add(new ScheduleBuffer
+                                {
+                                    destination = currentDest,
+                                    duration = selectedCourse.Lectures[k].Duration
+                                });
+                            }
+
+                            currentDest = FindExit("UscitaCastelidardo");
                             sb.Add(new ScheduleBuffer
                             {
                                 destination = currentDest,
-                                duration = selectedCourse.Lectures[k].Duration
+                                duration = -1
                             });
+                            UnitComponent uc = new UnitComponent
+                            {
+                                fromLocation = position,
+                                toLocation = firstDest,
+                                speed = GenerateInt(uic.minSpeed, uic.maxSpeed),
+                                minDistanceReached = uic.minDistanceReached,
+                                count = 0,
+                                currentBufferIndex = 0,
+                                routed = false
+                            };
+
+                            if (timeSlot == 1 && j == 0) //only the first entity in the first slot has covid to simulate what can be the infection
+                                hasCovid = true;
+
+                            CourseComponent courseComponent = new CourseComponent
+                            {
+                                id = selectedCourse.Id,
+                                lectureStart = selectedCourse.LectureStart
+                            };
+
+                            if (selectedCourse.Id == 0)
+                                courseComponent0++;
+
+                            if (UnityEngine.Random.Range(0, 100) <= (UnitManager.Instance.probabilityOfWearingMask * 100))
+                                wearMask = true;
+
+                            PersonComponent personComponent = new PersonComponent
+                            {
+                                age = GenerateInt(19, 30),
+                                sex = GenerateSex(),
+                                hasCovid = hasCovid,
+                                wearMask = wearMask
+                            };
+
+                            if (hasCovid)
+                                unitMaterial = UnitManager.Instance.covidMoveMaterial;
+
+                            ecb.AddSharedComponent(e, new RenderMesh
+                            {
+                                mesh = UnitManager.Instance.unitMesh,
+                                material = unitMaterial
+                            });
+
+                            ecb.SetComponent(defEntity, uc);
+                            ecb.SetComponent(defEntity, courseComponent);
+                            ecb.SetComponent(defEntity, personComponent);
                         }
-
-                        currentDest = FindExit("UscitaCastelidardo");
-                        sb.Add(new ScheduleBuffer
-                        {
-                            destination = currentDest,
-                            duration = -1
-                        });
-                        UnitComponent uc = new UnitComponent
-                        {
-                            fromLocation = position,
-                            toLocation = firstDest,
-                            speed = GenerateInt(uic.minSpeed, uic.maxSpeed),
-                            minDistanceReached = uic.minDistanceReached,
-                            count = 0,
-                            currentBufferIndex = 0,
-                            routed = false
-                        };
-
-                        if (timeSlot == 1 && j == 0) //only the first entity in the first slot has covid to simulate what can be the infection
-                            hasCovid = true;
-
-                        CourseComponent courseComponent = new CourseComponent
-                        {
-                            id = selectedCourse.Id,
-                            lectureStart = selectedCourse.LectureStart
-                        };
-
-                        if (UnityEngine.Random.Range(0, 100) <= (UnitManager.Instance.probabilityOfWearingMask * 100))
-                            wearMask = true;
-
-                        PersonComponent personComponent = new PersonComponent
-                        {
-                            age = GenerateInt(19, 30),
-                            sex = GenerateSex(),
-                            hasCovid = hasCovid,
-                            wearMask = wearMask
-                        };
-
-                        if (hasCovid)
-                            unitMaterial = UnitManager.Instance.covidMoveMaterial;
-
-                        ecb.AddSharedComponent(e, new RenderMesh
-                        {
-                            mesh = UnitManager.Instance.unitMesh,
-                            material = unitMaterial
-                        });
-
-                        ecb.SetComponent(defEntity, uc);
-                        ecb.SetComponent(defEntity, courseComponent);
-                        ecb.SetComponent(defEntity, personComponent);
-                    }
-                }).Run();
+                        Debug.Log("There are " + courseComponent0 + " entities with 0 id course");
+                        Debug.Log("Courses spawned since slot " + timeSlot + " : " + totCourses);
+                    }).Run();
+            }
         }
         bi_ECB.AddJobHandleForProducer(Dependency);
 
@@ -214,8 +230,9 @@ public class UnitInitializerSystem : SystemBase
         List<int> durationsForLectures = new List<int>();
 
         // a lecture can start in the last slot of a day
-        lectureStart = GenerateInt(1, maxSlotsInSingleDay);
-        int maxScheduleSlotsDuration = maxSlotsInSingleDay - lectureStart; // even the last lecture can last 1 slot
+        lectureStart = GenerateInt(1, maxSlotsInSingleDay+1);
+        int lectureEnd = GenerateInt(lectureStart+1, maxSlotsInSingleDay+2);
+        int maxScheduleSlotsDuration = lectureEnd - lectureStart; // even the last lecture can last 1 slot
         int singleDuration;
 
         while (maxScheduleSlotsDuration != 0)
