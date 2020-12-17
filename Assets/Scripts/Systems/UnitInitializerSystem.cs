@@ -7,9 +7,6 @@ using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine;
 
-using System.IO;
-using System;
-
 public class UnitInitializerSystem : SystemBase
 {
     BeginInitializationEntityCommandBufferSystem bi_ECB;
@@ -61,25 +58,6 @@ public class UnitInitializerSystem : SystemBase
 
         bi_ECB = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
         elapsedTime = 0;
-    }
-
-    private int GetMaxSlotsInSingleDay()
-    {
-        int slots = 0;
-        try
-        {
-            using (StreamReader sr = new StreamReader("../PoliDOTS/Assets/Init/Init.txt"))
-            {
-                string line = sr.ReadLine();
-                slots = int.Parse(line.Split('=')[1]);
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.LogError(e.Message);
-            maxSlotsInSingleDay = 8;
-        }
-        return slots;
     }
 
     protected override void OnUpdate()

@@ -22,9 +22,10 @@ public class UnitManager : MonoBehaviour
     public float InfectionDistance { get; private set; }
     public float DelayPercentageTimeSlot { get; private set; }
     public bool UseCache { get; private set; }
-    public int Speed { get; private set; }
     public int NumEntitiesToSpawn { get; private set; }
     private int MaxSlotsInSingleDay { get; set; }
+
+    public int Speed { get; private set; } = 25;
 
     //configs not hardcoded
     public Material healthyMoveMaterial;
@@ -33,13 +34,14 @@ public class UnitManager : MonoBehaviour
     public Material covidWaitMaterial;
     public Mesh unitMesh;
 
+    private int startTimeSeconds;
     private float percentageOfInfected;
     private int boxHeight;
     private int boxWidth;
     private int padding;
     private int boxXPosition;
     private int boxYPosition;
-    private int seconds;
+    private int secondsInRealLife;
 
 
     private void Awake()
@@ -67,16 +69,20 @@ public class UnitManager : MonoBehaviour
         //values read from config file
         Dictionary<string, string> configValues = GetConfigValues();
 
+        string tempStartTime = configValues["START_TIME_REAL_LIFE"];
+
+        int startTimeH = int.Parse(tempStartTime.Split(':')[0]);
+        int startTimeM = int.Parse(tempStartTime.Split(':')[1]);
+        startTimeSeconds = (startTimeH * 60 + startTimeM) * 60;
 
         MaxSlotsInSingleDay = int.Parse(configValues["MAX_SLOTS_IN_SINGLE_DAY"]);
         NumEntitiesToSpawn = int.Parse(configValues["NUM_ENTITIES_TO_SPAWN"]);
-        TimeSlotDurationS = int.Parse(configValues["TIME_SLOT_DURATION"]);
+        TimeSlotDurationS = int.Parse(configValues["SLOT_DURATION_REAL_LIFE_MINUTES"]);
         ProbabilityOfInfection = float.Parse(configValues["PROBABILITY_OF_INFECTION"], CultureInfo.InvariantCulture.NumberFormat);
         ProbabilityOfInfectionWithMask = float.Parse(configValues["PROBABILITY_OF_INFECTION_WITH_MASK"], CultureInfo.InvariantCulture.NumberFormat);
         ProbabilityOfWearingMask = float.Parse(configValues["PROBABILITY_OF_WEARING_MASK"], CultureInfo.InvariantCulture.NumberFormat);
         InfectionDistance = float.Parse(configValues["INFECTION_DISTANCE"], CultureInfo.InvariantCulture.NumberFormat);
         DelayPercentageTimeSlot = float.Parse(configValues["DELAY_PERCENTAGE_TIMESLOT"], CultureInfo.InvariantCulture.NumberFormat);
-        Speed = int.Parse(configValues["SPEED"]);
         UseCache = configValues["USE_CACHE"] == "true";
     }
 
@@ -107,7 +113,7 @@ public class UnitManager : MonoBehaviour
 
     private void Update()
     {
-        seconds = (int)(Time.time * 5400 / TimeSlotDurationS) + 30600;
+        secondsInRealLife = (int)(Time.time * 60) + startTimeSeconds;
     }
 
     public void OnGUI()
@@ -116,8 +122,8 @@ public class UnitManager : MonoBehaviour
         boxWidth = Screen.width / 4;
         boxHeight = Screen.height / 20;
 
-        int hours = seconds / 3600;
-        int minutes = (seconds % 3600) / 60;
+        int hours = secondsInRealLife / 3600;
+        int minutes = (secondsInRealLife % 3600) / 60;
 
         boxXPosition = 5;
         boxYPosition = Screen.height - 40;
