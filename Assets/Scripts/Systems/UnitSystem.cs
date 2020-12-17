@@ -9,6 +9,8 @@ using Unity.Transforms;
 using UnityEngine.AI;
 using UnityEngine.Experimental.AI;
 
+using UnityEngine;
+
 public class UnitSystem : SystemBase
 {
     private NavMeshQuery query;
@@ -95,12 +97,12 @@ public class UnitSystem : SystemBase
                     totalNumberOfCovid++;
                 }
 
-                if (i <= UnitManager.Instance.maxEntitiesRoutedPerFrame)
+                if (i <= UnitManager.Instance.MaxEntitiesRoutedPerFrame)
                 {
                     string key = uc.fromLocation.x + "_" + uc.fromLocation.z + "_" + uc.toLocation.x + "_" + uc.toLocation.z;
 
                     //Cached path
-                    if (UnitManager.Instance.useCache && allPaths.ContainsKey(key) && (!uc.routed || ub.Length == 0))
+                    if (UnitManager.Instance.UseCache && allPaths.ContainsKey(key) && (!uc.routed || ub.Length == 0))
                     {
                         allPaths.TryGetValue(key, out float3[] cachedPath);
                         for (int h = 0; h < cachedPath.Length; h++)
@@ -116,8 +118,7 @@ public class UnitSystem : SystemBase
                     else if (!uc.routed || ub.Length == 0)
                     {
                         keys[counter] = key;
-
-                        NavMeshQuery currentQuery = new NavMeshQuery(navMeshWorld, Allocator.Persistent, UnitManager.Instance.maxPathNodePoolSize);
+                        NavMeshQuery currentQuery = new NavMeshQuery(navMeshWorld, Allocator.Persistent, UnitManager.Instance.MaxPathNodePoolSize);
                         SinglePathFindingJob spfj = new SinglePathFindingJob()
                         {
                             query = currentQuery,
@@ -126,10 +127,10 @@ public class UnitSystem : SystemBase
                             fromLocation = uc.fromLocation,
                             toLocation = uc.toLocation,
                             extents = extents,
-                            maxIteration = UnitManager.Instance.maxIterations,
+                            maxIteration = UnitManager.Instance.MaxIterations,
                             result = results[counter],
                             statusOutput = statusOutputs[counter],
-                            maxPathSize = UnitManager.Instance.maxPathSize,
+                            maxPathSize = UnitManager.Instance.MaxPathSize,
                             ub = ub
                         };
                         routedEntities.Add(e);
@@ -161,7 +162,7 @@ public class UnitSystem : SystemBase
         {
             if (statusOutputs[j][0] == 1)
             {
-                if (UnitManager.Instance.useCache && !allPaths.ContainsKey(keys[j]))
+                if (UnitManager.Instance.UseCache && !allPaths.ContainsKey(keys[j]))
                 {
                     float3[] wayPoints = new float3[statusOutputs[j][1]];
                     for (int k = 0; k < statusOutputs[j][1]; k++)
@@ -273,14 +274,14 @@ public class UnitSystem : SystemBase
                    if (!pc.hasCovid)
                    {
                        foreach (float3 pos in covidPositions)
-                           if (math.abs(pos.x - trans.Value.x) < UnitManager.Instance.infectionDistance && math.abs(pos.z - trans.Value.z) < UnitManager.Instance.infectionDistance)
+                           if (math.abs(pos.x - trans.Value.x) < UnitManager.Instance.InfectionDistance && math.abs(pos.z - trans.Value.z) < UnitManager.Instance.InfectionDistance)
                            {
                                contagionPercentageValue = UnityEngine.Random.Range(0, 100);
 
                                if (pc.wearMask)
-                                   covidPercentage = UnitManager.Instance.probabilityOfWearingMask * 100;
+                                   covidPercentage = UnitManager.Instance.ProbabilityOfWearingMask * 100;
                                else
-                                   covidPercentage = UnitManager.Instance.probabilityOfInfection * 100;
+                                   covidPercentage = UnitManager.Instance.ProbabilityOfInfection * 100;
 
                                if (contagionPercentageValue <= covidPercentage)
                                {
@@ -345,15 +346,15 @@ public class UnitSystem : SystemBase
                }
            }).Run();
 
-        UnitManager.Instance.totNumberOfStudents = totalNumberOfStudents;
-        UnitManager.Instance.totNumberOfCovid = totalNumberOfCovid;
+        UnitManager.Instance.TotNumberOfStudents = totalNumberOfStudents;
+        UnitManager.Instance.TotNumberOfCovid = totalNumberOfCovid;
     }
 
     protected override void OnDestroy()
     {
         cellVsEntityPositions.Dispose();
 
-        for (int n = 0; n <= UnitManager.Instance.maxEntitiesRoutedPerFrame; n++)
+        for (int n = 0; n <= UnitManager.Instance.MaxEntitiesRoutedPerFrame; n++)
         {
             statusOutputs[n].Dispose();
             results[n].Dispose();

@@ -17,8 +17,8 @@ public class WaitSystem : SystemBase
         var randomArray = World.GetExistingSystem<RandomSystem>().RandomArray;
 
         float elapsedTime = (float)Time.ElapsedTime;
-        int timeSlotDurationS = UnitManager.Instance.timeSlotDurationS;
-        float delayVariance = timeSlotDurationS * UnitManager.Instance.delayPercentageTimeSlot;
+        int timeSlotDurationS = UnitManager.Instance.TimeSlotDurationS;
+        float delayVariance = timeSlotDurationS * UnitManager.Instance.DelayPercentageTimeSlot;
         float halfDelayVariance = delayVariance / 2;
 
         Entities
@@ -31,7 +31,7 @@ public class WaitSystem : SystemBase
                 if (wc.waitEndTime == 0)
                 {
                     // stop waiting when the next slot starts
-                    wc.waitEndTime = timeSlotDurationS * ((UnitManager.Instance.currentSlotNumber - 1) + wc.slotsToWait) + (random.NextFloat(delayVariance) - halfDelayVariance);
+                    wc.waitEndTime = timeSlotDurationS * ((UnitManager.Instance.CurrentSlotNumber - 1) + wc.slotsToWait) + (random.NextFloat(delayVariance) - halfDelayVariance);
                 }
                 else if (elapsedTime > wc.waitEndTime)
                 {

@@ -7,11 +7,13 @@ using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine;
 
+using System.IO;
+using System;
+
 public class UnitInitializerSystem : SystemBase
 {
     BeginInitializationEntityCommandBufferSystem bi_ECB;
     public float elapsedTime;
-    public double timeForOneSecond;
     public int timeSlot;
     public List<Course> courses;
     public int currentCourse;
@@ -28,23 +30,21 @@ public class UnitInitializerSystem : SystemBase
 
     protected override void OnCreate()
     {
-        maxSlotsInSingleDay = 7;
+        maxSlotsInSingleDay = int.Parse(UnitManager.GetConfigValues()["MAX_SLOTS_IN_SINGLE_DAY"]);
+        Debug.Log(maxSlotsInSingleDay);
         numberOfRooms = 30;
-        int lectureStart;
         timeSlot = 0;
 
         numberOfCourses = CourseName.GetValues(typeof(CourseName)).Length;
         courses = new List<Course>();
         lastSlot = 0;
-        int totDuration = 0;
-
         List<Lecture> lectures;
         for (int count = 0; count < numberOfCourses; count++)
         {
+            int lectureStart;
             lectures = GenerateSchedule(out lectureStart);
 
-            totDuration = 0;
-
+            int totDuration = 0;
             if (lastSlot < lectureStart)
                 lastSlot = lectureStart;
             courses.Add(new Course(count, CourseName.GetValues(typeof(CourseName)).GetValue(count).ToString(), lectures, lectureStart));
@@ -64,6 +64,25 @@ public class UnitInitializerSystem : SystemBase
         elapsedTime = 0;
     }
 
+    private int GetMaxSlotsInSingleDay()
+    {
+        int slots = 0;
+        try
+        {
+            using (StreamReader sr = new StreamReader("../PoliDOTS/Assets/Init/Init.txt"))
+            {
+                string line = sr.ReadLine();
+                slots = int.Parse(line.Split('=')[1]);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError(e.Message);
+            maxSlotsInSingleDay = 8;
+        }
+        return slots;
+    }
+
     protected override void OnUpdate()
     {
         var ecb = bi_ECB.CreateCommandBuffer();
@@ -71,12 +90,12 @@ public class UnitInitializerSystem : SystemBase
 
 
         //spawn units when sim starts and every if another slot has passed and there are still some courses beginning in a later slot i enter the lambda
-        if (timeSlot == 0 || (elapsedTime > UnitManager.Instance.timeSlotDurationS && timeSlot <= lastSlot))
+        if (timeSlot == 0 || (elapsedTime > UnitManager.Instance.TimeSlotDurationS && timeSlot <= lastSlot))
         {
             elapsedTime = 0;
             timeSlot++;
 
-            UnitManager.Instance.currentSlotNumber = timeSlot;
+            UnitManager.Instance.CurrentSlotNumber = timeSlot;
 
             availableCoursesIds = new NativeArray<int>(CourseName.GetValues(typeof(CourseName)).Length, Allocator.Temp);
             int numberAvailableCourses = 0;
@@ -98,7 +117,7 @@ public class UnitInitializerSystem : SystemBase
                     .WithoutBurst()
                     .ForEach((Entity e, int entityInQueryIndex, in UnitInitializerComponent uic, in LocalToWorld ltw) =>
                     {
-                        for (int j = 0; j < uic.numEntitiesToSpawn; j++)
+                        for (int j = 0; j < UnitManager.Instance.NumEntitiesToSpawn; j++)
                         {
                             Entity defEntity = ecb.Instantiate(uic.prefabToSpawn);
                             float3 position = new float3(UnityEngine.Random.Range(0, 36), uic.baseOffset, 0) + uic.currentPosition; //value 36 based on the spawner position (-28,0,-47)
@@ -144,7 +163,7 @@ public class UnitInitializerSystem : SystemBase
                             {
                                 fromLocation = position,
                                 toLocation = firstDest,
-                                speed = GenerateInt(uic.minSpeed, uic.maxSpeed),
+                                speed = UnitManager.Instance.Speed,
                                 minDistanceReached = uic.minDistanceReached,
                                 count = 0,
                                 currentBufferIndex = 0,
@@ -163,7 +182,7 @@ public class UnitInitializerSystem : SystemBase
                             if (selectedCourse.Id == 0)
                                 courseComponent0++;
 
-                            if (UnityEngine.Random.Range(0, 100) <= (UnitManager.Instance.probabilityOfWearingMask * 100))
+                            if (UnityEngine.Random.Range(0, 100) <= (UnitManager.Instance.ProbabilityOfWearingMask * 100))
                                 wearMask = true;
 
                             PersonComponent personComponent = new PersonComponent
