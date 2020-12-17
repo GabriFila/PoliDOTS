@@ -21,7 +21,7 @@ public class UnitManager : MonoBehaviour
     public Mesh unitMesh;
 
     public int totNumberOfStudents { get; set; }
-    private int totNumberOfCovid;
+    public int totNumberOfCovid { get; set; }
     public int currentSlotNumber { get; set; }
     private float percentageOfInfected;
 
@@ -30,17 +30,8 @@ public class UnitManager : MonoBehaviour
     private int padding;
     private int boxXPosition;
     private int boxYPosition;
-    private int seconds = 30600;
+    private int seconds;
 
-    public void SetNumberOfCovid(int totNumberOfCovid)
-    {
-        this.totNumberOfCovid = totNumberOfCovid;
-    }
-
-    public void UpdateSeconds(int numOfSeconds)
-    {
-        seconds += numOfSeconds;
-    }
 
     private void Awake()
     {
@@ -54,6 +45,12 @@ public class UnitManager : MonoBehaviour
             Destroy(gameObject);
         }
     }
+
+    private void Update()
+    {
+        seconds = (int)(Time.time * 5400 / timeSlotDurationS) + 30600;
+    }
+
     public void OnGUI()
     {
         padding = 2;

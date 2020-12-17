@@ -346,7 +346,7 @@ public class UnitSystem : SystemBase
            }).Run();
 
         UnitManager.Instance.totNumberOfStudents = totalNumberOfStudents;
-        UnitManager.Instance.SetNumberOfCovid(totalNumberOfCovid);
+        UnitManager.Instance.totNumberOfCovid = totalNumberOfCovid;
     }
 
     protected override void OnDestroy()

@@ -1,14 +1,11 @@
-﻿using System;
-using Unity.Entities;
+﻿using Unity.Entities;
 using Unity.Rendering;
 using UnityEngine;
 
 public class WaitSystem : SystemBase
 {
     BeginInitializationEntityCommandBufferSystem bi_ECB;
-    public float elapsedTime;
 
-    long timeSlotDurationMs = 1000 * 1;
     protected override void OnCreate()
     {
         bi_ECB = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
@@ -18,24 +15,20 @@ public class WaitSystem : SystemBase
     {
         var ecb = bi_ECB.CreateCommandBuffer().AsParallelWriter();
 
-        long currentUnixTimeS = ((DateTimeOffset)DateTime.Now).ToUnixTimeSeconds();
-        long slotDuration = timeSlotDurationMs;
-        long el = (long)Time.ElapsedTime;
+        float elapsedTime = (float)Time.ElapsedTime;
+        int timeSlotDurationS = UnitManager.Instance.timeSlotDurationS;
         Entities
             .WithoutBurst()
             .ForEach((Entity e, int entityInQueryIndex, ref WaitComponent wc, ref PersonComponent pc) =>
             {
                 if (wc.waitEndTime == 0)
                 {
-                    // time when current slot started
-                    int rem = ((UnitManager.Instance.currentSlotNumber - 1) * UnitManager.Instance.timeSlotDurationS);
-                    // time to end (timeSLot duration - delay adjustment)
-                    wc.waitEndTime = currentUnixTimeS + wc.slotsToWait * UnitManager.Instance.timeSlotDurationS - (el - rem);
+                    // stop waiting when the next slot starts
+                    wc.waitEndTime = timeSlotDurationS * ((UnitManager.Instance.currentSlotNumber - 1) + wc.slotsToWait);
                 }
-                else if (currentUnixTimeS > wc.waitEndTime)
+                else if (elapsedTime > wc.waitEndTime)
                 {
                     ecb.RemoveComponent<WaitComponent>(entityInQueryIndex, e);
-                    // TODO when enabling burst the following line throws a one-time error, which doesn't seem to affect the execution
 
                     Material unitMaterial;
 

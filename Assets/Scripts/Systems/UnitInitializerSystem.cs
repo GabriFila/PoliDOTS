@@ -52,11 +52,9 @@ public class UnitInitializerSystem : SystemBase
             for (int k = 0; k < courses[count].Lectures.Count; k++)
                 totDuration += courses[count].Lectures[k].Duration;
 
-            Debug.Log("Course " + (count+1) + " : lectures start : " + lectureStart + " , lectures end : " + (lectureStart+totDuration) + " , num lectures : " + lectures.Count);
-
             int startL = lectureStart;
-            for (int k = 0; k < courses[count].Lectures.Count; k++) {
-                Debug.Log("lectures " + (k + 1) + " start : " + startL + " , end : " + (startL + courses[count].Lectures[k].Duration));
+            for (int k = 0; k < courses[count].Lectures.Count; k++)
+            {
                 startL += courses[count].Lectures[k].Duration;
             }
 
@@ -70,16 +68,7 @@ public class UnitInitializerSystem : SystemBase
     {
         var ecb = bi_ECB.CreateCommandBuffer();
         elapsedTime += Time.DeltaTime;
-        timeForOneSecond += Time.DeltaTime;
-        int numOfSeconds = 0;
-        double oneSecond = (double)UnitManager.Instance.timeSlotDurationS / (double)(60 * 60 + 60 * 30);
 
-        if (timeForOneSecond >= oneSecond)
-        {
-            numOfSeconds = (int)(timeForOneSecond / oneSecond);
-            UnitManager.Instance.UpdateSeconds(numOfSeconds);
-            timeForOneSecond = timeForOneSecond % oneSecond;
-        }
 
         //spawn units when sim starts and every if another slot has passed and there are still some courses beginning in a later slot i enter the lambda
         if (timeSlot == 0 || (elapsedTime > UnitManager.Instance.timeSlotDurationS && timeSlot <= lastSlot))
@@ -135,7 +124,6 @@ public class UnitInitializerSystem : SystemBase
                             //add lectures to Schedule_Buffer
                             for (int k = 0; k < selectedCourse.Lectures.Count; k++)
                             {
-                                //Debug.Log("Init:" + (selectedCourse.Lectures[k].Duration == 0));
                                 currentDest = FindDestination("Aula" + selectedCourse.Lectures[k].Room);
                                 if (k == 0)
                                     firstDest = currentDest;
@@ -199,8 +187,6 @@ public class UnitInitializerSystem : SystemBase
                             ecb.SetComponent(defEntity, courseComponent);
                             ecb.SetComponent(defEntity, personComponent);
                         }
-                        Debug.Log("There are " + courseComponent0 + " entities with 0 id course");
-                        Debug.Log("Courses spawned since slot " + timeSlot + " : " + totCourses);
                     }).Run();
             }
         }
@@ -230,8 +216,8 @@ public class UnitInitializerSystem : SystemBase
         List<int> durationsForLectures = new List<int>();
 
         // a lecture can start in the last slot of a day
-        lectureStart = GenerateInt(1, maxSlotsInSingleDay+1);
-        int lectureEnd = GenerateInt(lectureStart+1, maxSlotsInSingleDay+2);
+        lectureStart = GenerateInt(1, maxSlotsInSingleDay + 1);
+        int lectureEnd = GenerateInt(lectureStart + 1, maxSlotsInSingleDay + 2);
         int maxScheduleSlotsDuration = lectureEnd - lectureStart; // even the last lecture can last 1 slot
         int singleDuration;
 

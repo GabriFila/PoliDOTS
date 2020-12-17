@@ -22047,7 +22047,7 @@ MonoBehaviour:
   maxPathNodePoolSize: 1024
   maxIterations: 1024
   useCache: 1
-  timeSlotDurationS: 30
+  timeSlotDurationS: 15
   probabilityOfInfection: 0.7
   probabilityOfInfectionWithMask: 0.3
   probabilityOfWearingMask: 0.5
