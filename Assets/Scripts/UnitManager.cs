@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using UnityEngine;
-using System.Collections.Generic;
 
 public class UnitManager : MonoBehaviour
 {
@@ -25,7 +26,7 @@ public class UnitManager : MonoBehaviour
     public int NumEntitiesToSpawn { get; private set; }
     private int MaxSlotsInSingleDay { get; set; }
 
-    //init not hardcoded
+    //configs not hardcoded
     public Material healthyMoveMaterial;
     public Material healthyWaitMaterial;
     public Material covidMoveMaterial;
@@ -63,17 +64,18 @@ public class UnitManager : MonoBehaviour
         MaxEntitiesRoutedPerFrame = 4000;
         MaxPathNodePoolSize = 1024;
         MaxIterations = 1024;
-        //values read from Init file
+        //values read from config file
         Dictionary<string, string> configValues = GetConfigValues();
-        
+
+
         MaxSlotsInSingleDay = int.Parse(configValues["MAX_SLOTS_IN_SINGLE_DAY"]);
         NumEntitiesToSpawn = int.Parse(configValues["NUM_ENTITIES_TO_SPAWN"]);
         TimeSlotDurationS = int.Parse(configValues["TIME_SLOT_DURATION"]);
-        ProbabilityOfInfection = float.Parse(configValues["PROBABILITY_OF_INFECTION"]);
-        ProbabilityOfInfectionWithMask = float.Parse(configValues["PROBABILITY_OF_INFECTION_WITH_MASK"]);
-        ProbabilityOfWearingMask = float.Parse(configValues["PROBABILITY_OF_WEARING_MASK"]);
-        InfectionDistance = float.Parse(configValues["INFECTION_DISTNACE"]);
-        DelayPercentageTimeSlot = float.Parse(configValues["DELAY_PERCENTAGE_TIMESLOT"]);
+        ProbabilityOfInfection = float.Parse(configValues["PROBABILITY_OF_INFECTION"], CultureInfo.InvariantCulture.NumberFormat);
+        ProbabilityOfInfectionWithMask = float.Parse(configValues["PROBABILITY_OF_INFECTION_WITH_MASK"], CultureInfo.InvariantCulture.NumberFormat);
+        ProbabilityOfWearingMask = float.Parse(configValues["PROBABILITY_OF_WEARING_MASK"], CultureInfo.InvariantCulture.NumberFormat);
+        InfectionDistance = float.Parse(configValues["INFECTION_DISTANCE"], CultureInfo.InvariantCulture.NumberFormat);
+        DelayPercentageTimeSlot = float.Parse(configValues["DELAY_PERCENTAGE_TIMESLOT"], CultureInfo.InvariantCulture.NumberFormat);
         Speed = int.Parse(configValues["SPEED"]);
         UseCache = configValues["USE_CACHE"] == "true";
     }
@@ -84,7 +86,7 @@ public class UnitManager : MonoBehaviour
 
         try
         {
-            using (StreamReader sr = new StreamReader("../PoliDOTS/Assets/Init/Init.txt"))
+            using (StreamReader sr = new StreamReader("./config.txt"))
             {
                 string line;
                 while ((line = sr.ReadLine()) != null)

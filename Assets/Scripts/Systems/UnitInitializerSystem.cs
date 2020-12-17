@@ -31,7 +31,6 @@ public class UnitInitializerSystem : SystemBase
     protected override void OnCreate()
     {
         maxSlotsInSingleDay = int.Parse(UnitManager.GetConfigValues()["MAX_SLOTS_IN_SINGLE_DAY"]);
-        Debug.Log(maxSlotsInSingleDay);
         numberOfRooms = 30;
         timeSlot = 0;
 
