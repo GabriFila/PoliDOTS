@@ -14,6 +14,8 @@ public class UnitManager : MonoBehaviour
     public float probabilityOfWearingMask;
     public float infectionDistance;
 
+    public float delayPercentageTimeSlot;
+
     public Material healthyMoveMaterial;
     public Material healthyWaitMaterial;
     public Material covidMoveMaterial;

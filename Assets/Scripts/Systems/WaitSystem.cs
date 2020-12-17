@@ -14,17 +14,24 @@ public class WaitSystem : SystemBase
     protected override void OnUpdate()
     {
         var ecb = bi_ECB.CreateCommandBuffer().AsParallelWriter();
+        var randomArray = World.GetExistingSystem<RandomSystem>().RandomArray;
 
         float elapsedTime = (float)Time.ElapsedTime;
         int timeSlotDurationS = UnitManager.Instance.timeSlotDurationS;
+        float delayVariance = timeSlotDurationS * UnitManager.Instance.delayPercentageTimeSlot;
+        float halfDelayVariance = delayVariance / 2;
+
         Entities
             .WithoutBurst()
-            .ForEach((Entity e, int entityInQueryIndex, ref WaitComponent wc, ref PersonComponent pc) =>
+            .WithNativeDisableParallelForRestriction(randomArray)
+            .ForEach((Entity e, int entityInQueryIndex, int nativeThreadIndex, ref WaitComponent wc, ref PersonComponent pc) =>
             {
+                var random = randomArray[nativeThreadIndex];
+
                 if (wc.waitEndTime == 0)
                 {
                     // stop waiting when the next slot starts
-                    wc.waitEndTime = timeSlotDurationS * ((UnitManager.Instance.currentSlotNumber - 1) + wc.slotsToWait);
+                    wc.waitEndTime = timeSlotDurationS * ((UnitManager.Instance.currentSlotNumber - 1) + wc.slotsToWait) + (random.NextFloat(delayVariance) - halfDelayVariance);
                 }
                 else if (elapsedTime > wc.waitEndTime)
                 {
@@ -43,6 +50,7 @@ public class WaitSystem : SystemBase
                         material = unitMaterial
                     });
                 }
+                randomArray[nativeThreadIndex] = random;
             }).ScheduleParallel();
     }
 }

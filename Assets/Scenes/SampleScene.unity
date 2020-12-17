@@ -22047,11 +22047,12 @@ MonoBehaviour:
   maxPathNodePoolSize: 1024
   maxIterations: 1024
   useCache: 1
-  timeSlotDurationS: 15
+  timeSlotDurationS: 90
   probabilityOfInfection: 0.7
   probabilityOfInfectionWithMask: 0.3
   probabilityOfWearingMask: 0.5
   infectionDistance: 0.5
+  delayPercentageTimeSlot: 0.2
   healthyMoveMaterial: {fileID: 2100000, guid: 223d8b59a750bae4eaaa541919067966, type: 2}
   healthyWaitMaterial: {fileID: 2100000, guid: ad26f0bfdf3fde945a53e2745ae529b6, type: 2}
   covidMoveMaterial: {fileID: 2100000, guid: a7255a63820135643ae7b2db949716cf, type: 2}
