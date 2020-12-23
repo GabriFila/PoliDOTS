@@ -78,6 +78,7 @@ public class UnitManager : MonoBehaviour
         MaxSlotsInSingleDay = int.Parse(configValues["MAX_SLOTS_IN_SINGLE_DAY"]);
         NumEntitiesToSpawn = int.Parse(configValues["NUM_ENTITIES_TO_SPAWN"]);
         TimeSlotDurationS = int.Parse(configValues["SLOT_DURATION_REAL_LIFE_MINUTES"]);
+        Time.timeScale = float.Parse(configValues["TIME_SCALE"], CultureInfo.InvariantCulture.NumberFormat);
         ProbabilityOfInfection = float.Parse(configValues["PROBABILITY_OF_INFECTION"], CultureInfo.InvariantCulture.NumberFormat);
         ProbabilityOfInfectionWithMask = float.Parse(configValues["PROBABILITY_OF_INFECTION_WITH_MASK"], CultureInfo.InvariantCulture.NumberFormat);
         ProbabilityOfWearingMask = float.Parse(configValues["PROBABILITY_OF_WEARING_MASK"], CultureInfo.InvariantCulture.NumberFormat);
@@ -105,7 +106,7 @@ public class UnitManager : MonoBehaviour
         {
             Debug.LogError(e.Message);
         }
-        if (configValues.Count != 10)
+        if (configValues.Count != 11)
             Debug.LogError("Wrong format for Init.txt -> Not enough values");
 
         return configValues;
