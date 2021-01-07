@@ -11,15 +11,19 @@ public class UnitManager : MonoBehaviour
     public int MaxEntitiesRoutedPerFrame { get; private set; }
     public int MaxPathNodePoolSize { get; private set; }
     public int MaxIterations { get; private set; }
-    public int TotNumberOfStudents { get; set; }
-    public int TotNumberOfCovid { get; set; }
+    public int TotNumberOfStudentsExit { get; set; }
+    public int TotNumberOfCovidExit { get; set; }
+    public int CurrentNumberOfCovid { get; set; }
+    public int CurrentNumberOfStudents { get; set; }
     public int CurrentSlotNumber { get; set; }
-
     public int TimeSlotDurationS { get; private set; }
     public float ProbabilityOfInfection { get; private set; }
     public float ProbabilityOfInfectionWithMask { get; private set; }
     public float ProbabilityOfWearingMask { get; private set; }
     public float InfectionDistance { get; private set; }
+    public float ProbabilityOfInfectionWait { get; private set; }
+    public float ProbabilityOfInfectionWithMaskWait { get; private set; }
+    public float InfectionDistanceWait { get; private set; }
     public float DelayPercentageTimeSlot { get; private set; }
     public bool UseCache { get; private set; }
     public int NumEntitiesToSpawn { get; private set; }
@@ -36,6 +40,9 @@ public class UnitManager : MonoBehaviour
 
     private int startTimeSeconds;
     private float percentageOfInfected;
+    private float percentageOfCurrentInfected;
+    private int totalNumberOfStudents;
+    private int totalNumberOfCovid;
     private int boxHeight;
     private int boxWidth;
     private int padding;
@@ -83,6 +90,9 @@ public class UnitManager : MonoBehaviour
         ProbabilityOfInfectionWithMask = float.Parse(configValues["PROBABILITY_OF_INFECTION_WITH_MASK"], CultureInfo.InvariantCulture.NumberFormat);
         ProbabilityOfWearingMask = float.Parse(configValues["PROBABILITY_OF_WEARING_MASK"], CultureInfo.InvariantCulture.NumberFormat);
         InfectionDistance = float.Parse(configValues["INFECTION_DISTANCE"], CultureInfo.InvariantCulture.NumberFormat);
+        ProbabilityOfInfectionWait = float.Parse(configValues["PROBABILITY_OF_INFECTION_WAIT"], CultureInfo.InvariantCulture.NumberFormat);
+        ProbabilityOfInfectionWithMaskWait = float.Parse(configValues["PROBABILITY_OF_INFECTION_WITH_MASK_WAIT"], CultureInfo.InvariantCulture.NumberFormat);
+        InfectionDistanceWait = float.Parse(configValues["INFECTION_DISTANCE_WAIT"], CultureInfo.InvariantCulture.NumberFormat);
         DelayPercentageTimeSlot = float.Parse(configValues["DELAY_PERCENTAGE_TIMESLOT"], CultureInfo.InvariantCulture.NumberFormat);
         UseCache = configValues["USE_CACHE"] == "true";
     }
@@ -106,7 +116,7 @@ public class UnitManager : MonoBehaviour
         {
             Debug.LogError(e.Message);
         }
-        if (configValues.Count != 11)
+        if (configValues.Count != 14)
             Debug.LogError("Wrong format for Init.txt -> Not enough values");
 
         return configValues;
@@ -143,13 +153,25 @@ public class UnitManager : MonoBehaviour
             GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot(hour) : " + hours + " : 0" + minutes);
         else
             GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot(hour) : " + hours + " : " + minutes);
+        
         boxYPosition -= (boxHeight + padding);
-        percentageOfInfected = TotNumberOfStudents == 0 ? 0 : (TotNumberOfCovid * 100 / TotNumberOfStudents);
+        percentageOfCurrentInfected = CurrentNumberOfStudents == 0 ? 0 : (CurrentNumberOfCovid * 100 / CurrentNumberOfStudents);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Percentage of exposed students : " + percentageOfCurrentInfected + "%");
+        boxYPosition -= (boxHeight + padding);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Exposed to COVID-19: " + CurrentNumberOfCovid);
+        boxYPosition -= (boxHeight + padding);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Students inside POLITO : " + CurrentNumberOfStudents);
+        
+        boxYPosition -= (boxHeight + padding);
+        totalNumberOfStudents = CurrentNumberOfStudents + TotNumberOfStudentsExit;
+        totalNumberOfCovid = CurrentNumberOfCovid + TotNumberOfCovidExit;
+        percentageOfInfected = totalNumberOfStudents == 0 ? 0 : (totalNumberOfCovid * 100 / totalNumberOfStudents);
         GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Percentage of exposed students : " + percentageOfInfected + "%");
         boxYPosition -= (boxHeight + padding);
-        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Exposed to COVID-19 : " + TotNumberOfCovid);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Exposed to COVID-19: " + totalNumberOfCovid);
         boxYPosition -= (boxHeight + padding);
-        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Students inside POLITO : " + TotNumberOfStudents);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Students inside POLITO : " + totalNumberOfStudents);
+
 
         GUI.skin.box.fontSize = boxWidth / 20;
     }

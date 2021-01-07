@@ -25,6 +25,10 @@ public class UnitSystem : SystemBase
     private List<string> keys;
     private int totalNumberOfStudents;
     private int totalNumberOfCovid;
+    private int totalCurrentNumberOfStudents;
+    private int totalCurrentNumberOfCovid;
+    private int totalNumberOfStudentsExit;
+    private int totalNumberOfCovidExit;
 
     BeginInitializationEntityCommandBufferSystem bi_ECB;
 
@@ -46,6 +50,9 @@ public class UnitSystem : SystemBase
         queries = new List<NavMeshQuery>();
         jobHandles = new List<JobHandle>();
         keys = new List<string>();
+
+        totalNumberOfCovidExit = 0;
+        totalNumberOfStudentsExit = 0;
 
         for (int n = 0; n <= 4000; n++) //limit number equals to Max Entities routed per frame of UnitManager game object
         {
@@ -74,8 +81,8 @@ public class UnitSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        totalNumberOfStudents = 0;
-        totalNumberOfCovid = 0;
+        totalCurrentNumberOfStudents = 0;
+        totalCurrentNumberOfCovid = 0;
         List<float3> covidPositions = new List<float3>();
 
         float deltaTime = Time.DeltaTime;
@@ -89,12 +96,12 @@ public class UnitSystem : SystemBase
             WithStructuralChanges().
             ForEach((Entity e, ref UnitComponent uc, ref DynamicBuffer<UnitBuffer> ub, ref Translation trans, ref PersonComponent pc) =>
             {
-                totalNumberOfStudents++;
+                totalCurrentNumberOfStudents++;
 
                 if (pc.hasCovid)
                 {
                     covidPositions.Add(trans.Value);
-                    totalNumberOfCovid++;
+                    totalCurrentNumberOfCovid++;
                 }
 
                 if (i <= UnitManager.Instance.MaxEntitiesRoutedPerFrame)
@@ -247,6 +254,43 @@ public class UnitSystem : SystemBase
         float contagionPercentageValue;
         float covidPercentage;
 
+        Entities
+            .WithoutBurst()
+            .WithAll<WaitComponent>().ForEach((Entity e, ref Translation trans, ref PersonComponent pc) =>
+            {
+                if (!pc.hasCovid)
+                {
+                    foreach (float3 pos in covidPositions)
+                        if (math.abs(pos.x - trans.Value.x) < UnitManager.Instance.InfectionDistanceWait && math.abs(pos.z - trans.Value.z) < UnitManager.Instance.InfectionDistance)
+                        {
+                            contagionPercentageValue = UnityEngine.Random.Range(0, 100);
+
+                            if (pc.wearMask)
+                                covidPercentage = UnitManager.Instance.ProbabilityOfInfectionWithMaskWait * 100;
+                            else
+                                covidPercentage = UnitManager.Instance.ProbabilityOfInfectionWait * 100;
+
+                            if (contagionPercentageValue <= covidPercentage)
+                            {
+                                totalCurrentNumberOfCovid++;
+
+                                ecb.SetSharedComponent(e, new RenderMesh
+                                {
+                                    mesh = UnitManager.Instance.unitMesh,
+                                    material = UnitManager.Instance.covidMoveMaterial
+                                });
+
+                                pc.hasCovid = true;
+                                break;
+                            }
+                            else
+                                Debug.Log("Contagion Percentage Value: " + contagionPercentageValue + ", Covid Percentage: " + covidPercentage);
+                        }
+                }
+
+            }).Run();
+
+
         //Movement
         Entities
            .WithoutBurst()
@@ -279,13 +323,13 @@ public class UnitSystem : SystemBase
                                contagionPercentageValue = UnityEngine.Random.Range(0, 100);
 
                                if (pc.wearMask)
-                                   covidPercentage = UnitManager.Instance.ProbabilityOfWearingMask * 100;
+                                   covidPercentage = UnitManager.Instance.ProbabilityOfInfectionWithMask * 100;
                                else
                                    covidPercentage = UnitManager.Instance.ProbabilityOfInfection * 100;
 
                                if (contagionPercentageValue <= covidPercentage)
                                {
-                                   totalNumberOfCovid++;
+                                   totalCurrentNumberOfCovid++;
 
                                    ecb.SetSharedComponent(e, new RenderMesh
                                    {
@@ -337,17 +381,23 @@ public class UnitSystem : SystemBase
                        else if (uc.count == sb.Length - 1)
                        {
                            ecb.DestroyEntity(e);
-                           totalNumberOfStudents--;
+                           totalCurrentNumberOfStudents--;
+                           totalNumberOfStudentsExit++;
 
                            if (pc.hasCovid)
-                               totalNumberOfCovid--;
+                           {
+                               totalCurrentNumberOfCovid--;
+                               totalNumberOfCovidExit++;
+                           }
                        }
                    }
                }
            }).Run();
 
-        UnitManager.Instance.TotNumberOfStudents = totalNumberOfStudents;
-        UnitManager.Instance.TotNumberOfCovid = totalNumberOfCovid;
+        UnitManager.Instance.TotNumberOfStudentsExit = totalNumberOfStudentsExit;
+        UnitManager.Instance.TotNumberOfCovidExit = totalNumberOfCovidExit;
+        UnitManager.Instance.CurrentNumberOfStudents = totalCurrentNumberOfStudents;
+        UnitManager.Instance.CurrentNumberOfCovid = totalCurrentNumberOfCovid;
     }
 
     protected override void OnDestroy()
