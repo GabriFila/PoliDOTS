@@ -30,36 +30,6 @@ namespace Assets.Scripts
 
     }
 
-    public enum CourseName
-    {
-        Computer,
-        Informatica,
-        Nuclear,
-        Automotive,
-        Data_Science,
-        Civil,
-        Civile,
-        Building,
-        Edile,
-        Electronic,
-        Elettronica,
-        Mechanical,
-        Meccanica,
-        Mechatronic,
-        Physics,
-        Fisica,
-        Ict,
-        Biomedical,
-        Biomedica,
-        Aereospaziale,
-        Materials,
-        Cinema,
-        Gestionale,
-        Management,
-        Ambientale,
-        Nanotechnologies,
-        Nanotecnologie
-    }
 
 
 }

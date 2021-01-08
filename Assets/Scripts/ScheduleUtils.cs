@@ -1,5 +1,6 @@
 ﻿using Assets.Scripts;
 using System.Collections.Generic;
+using UnityEngine;
 
 public static class ScheduleUtils
 {
@@ -46,6 +47,4 @@ public static class ScheduleUtils
 
         return schedule;
     }
-
-
 }

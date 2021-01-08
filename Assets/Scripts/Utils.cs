@@ -27,7 +27,7 @@ public static class Utils
             Debug.LogError(e.Message);
             Application.Quit();
         }
-        if (configValues.Count != 15)
+        if (configValues.Count != 16)
         {
             Application.Quit();
             Debug.LogError("Wrong format for Init.txt -> Not enough values");

@@ -93,7 +93,7 @@ public class UnitManager : MonoBehaviour
         MaxDelayS = (int)(TimeSlotDurationS * maxDelayPercentageTimeSlot);
         UseCache = configValues["USE_CACHE"] == "true";
         // set the initial delay till first slot start to 2 times the maximum possible delay of a student in a sim
-        InitialDelayTillFirstSlotS = (int)(maxDelayPercentageTimeSlot * TimeSlotDurationS * 2);
+        InitialDelayTillFirstSlotS = (int)(maxDelayPercentageTimeSlot * TimeSlotDurationS * 1.5);
         Debug.Log("Unit manager config parsed");
     }
 

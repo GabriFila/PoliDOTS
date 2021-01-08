@@ -1,7 +1,6 @@
 ﻿using Assets.Scripts;
 using System.Collections.Generic;
 using System.Globalization;
-using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Rendering;
@@ -14,18 +13,15 @@ public class UnitInitializerSystem : SystemBase
     private float elapsedTime;
     // the close time slot ("intorno" in italian math) is the slot which is about to start or last started, based if at the moment the sim is in the delay range before the neightTimeSLot of after it
     private int prevCloseTimeSlot;
+    private int finalTimeSlot;
+    List<DistributedSpawner> timeSlotSpawners;
+
     private List<Course> courses;
     List<int> availableCourseIDsInCurrentSlot = new List<int>();
-    List<DistributedSpawner> timeSlotSpawners;
-    private int currentCourse;
+    List<List<int>> availableCourseIDsPerSlot;
 
-    private int finalTimeSlot;
-    private int numberOfCourses;
-
-    private int numberOfRooms;
     private bool hasCovidAlreadySpawned = false;
 
-    NativeArray<int> availableCoursesIds;
 
     protected override void OnCreate()
     {
@@ -35,55 +31,42 @@ public class UnitInitializerSystem : SystemBase
         int timeSlotDurationS = int.Parse(configValues["SLOT_DURATION_REAL_LIFE_MINUTES"]);
         float maxDelayPercentageTimeSlot = float.Parse(configValues["MAX_DELAY_PERCENTAGE_TIMESLOT"], CultureInfo.InvariantCulture.NumberFormat);
         int maxDelayS = (int)(timeSlotDurationS * maxDelayPercentageTimeSlot);
+        int numberOfCourses = int.Parse(configValues["NUMBER_OF_COURSES"]);
+        List<float> slotWeights = ParseSlotWeights(configValues["SPAWN_DISTRIBUTION"], slotsInDay);
 
-        string[] slotWeigthsStrs = configValues["SPAWN_WEIGTHS"].Replace("[", "").Replace("]", "").Split(',');
+        Debug.Log("Unit initializer config parsed");
 
-        if (slotWeigthsStrs.Length != slotsInDay)
-            Debug.LogError("Slots weight length is not the same as slots in day");
+        int numberOfRooms = 30;
 
-        List<float> slotWeigths = new List<float>();
-        float sumWeigths = 0;
-        foreach (string str in slotWeigthsStrs)
-        {
-            float newWeigth = float.Parse(str, CultureInfo.InvariantCulture.NumberFormat);
-            slotWeigths.Add(newWeigth);
-            sumWeigths += newWeigth;
-        }
-
-        if (sumWeigths != 1)
-            Debug.LogError("Slots weight total is not 1");
-
-        numberOfRooms = 30;
-
-        numberOfCourses = CourseName.GetValues(typeof(CourseName)).Length;
         courses = new List<Course>();
         finalTimeSlot = 0;
         List<Lecture> lectures;
-        for (int count = 0; count < numberOfCourses; count++)
+        for (int i = 0; i < numberOfCourses; i++)
         {
-            int lectureStartTimeSlot;
-            lectures = ScheduleUtils.GenerateSchedule(slotsInDay, numberOfRooms, out lectureStartTimeSlot);
-
-            int totDuration = 0;
+            lectures = ScheduleUtils.GenerateSchedule(slotsInDay, numberOfRooms, out int lectureStartTimeSlot);
             if (finalTimeSlot < lectureStartTimeSlot)
                 finalTimeSlot = lectureStartTimeSlot;
-            courses.Add(new Course(count, CourseName.GetValues(typeof(CourseName)).GetValue(count).ToString(), lectures, lectureStartTimeSlot));
-
-            for (int k = 0; k < courses[count].Lectures.Count; k++)
-                totDuration += courses[count].Lectures[k].Duration;
-
-            int startL = lectureStartTimeSlot;
-            for (int k = 0; k < courses[count].Lectures.Count; k++)
-            {
-                startL += courses[count].Lectures[k].Duration;
-            }
-
+            courses.Add(new Course(i, $"Course-{i}", lectures, lectureStartTimeSlot));
         }
+
+        availableCourseIDsPerSlot = new List<List<int>>();
+        for (int slotIdx = 0; slotIdx < slotsInDay; slotIdx++)
+        {
+            availableCourseIDsPerSlot.Add(new List<int>());
+            for (int courseIdx = 0; courseIdx < courses.Count; courseIdx++)
+            {
+                if (courses[courseIdx].LectureStart == slotIdx + 1)
+                {
+                    availableCourseIDsPerSlot[slotIdx].Add(courses[courseIdx].Id);
+                }
+            }
+        }
+
+        timeSlotSpawners = SpawnerGenerator.GenerateSpawners(totStudents, slotWeights, maxDelayS);
+        prevCloseTimeSlot = -1;
+
         bi_ECB = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
         elapsedTime = 0;
-
-        timeSlotSpawners = SpawnerGenerator.GenerateSpawners(totStudents, slotWeigths, maxDelayS);
-        prevCloseTimeSlot = -1;
     }
 
     protected override void OnUpdate()
@@ -113,14 +96,7 @@ public class UnitInitializerSystem : SystemBase
                 // update prevNeighbour to avoid reenter next frame
                 prevCloseTimeSlot = currentCloseTimeSlot;
                 // compute courses for next slots
-                availableCourseIDsInCurrentSlot.Clear();
-                for (int k = 0; k < courses.Count; k++)
-                {
-                    if (courses[k].LectureStart == currentCloseTimeSlot + 1)
-                    {
-                        availableCourseIDsInCurrentSlot.Add(courses[k].Id);
-                    }
-                }
+                availableCourseIDsInCurrentSlot = availableCourseIDsPerSlot[currentCloseTimeSlot];
             }
 
         }
@@ -151,7 +127,6 @@ public class UnitInitializerSystem : SystemBase
                         int selectedCourseId = availableCourseIDsInCurrentSlot[Utils.GenerateInt(availableCourseIDsInCurrentSlot.Count)];
 
                         Course selectedCourse = courses[selectedCourseId];
-                        currentCourse = selectedCourse.Id;
                         float3 currentDest;
                         float3 firstDest = 0;
 
@@ -227,6 +202,30 @@ public class UnitInitializerSystem : SystemBase
 
     }
 
+    private static List<float> ParseSlotWeights(string strArray, int slotsInDay)
+    {
+        string[] slotWeigthsStrs = strArray.Replace("[", "").Replace("]", "").Split(',');
 
+        if (slotWeigthsStrs.Length != slotsInDay)
+        {
+            Debug.LogError("Slots weight length is not the same as slots in day");
+            Application.Quit();
+        }
+
+        List<float> slotWeigths = new List<float>();
+        float sumWeigths = 0;
+        foreach (string str in slotWeigthsStrs)
+        {
+            float newWeigth = float.Parse(str, CultureInfo.InvariantCulture.NumberFormat);
+            slotWeigths.Add(newWeigth);
+            sumWeigths += newWeigth;
+        }
+        if (sumWeigths != 1)
+        {
+            Application.Quit();
+            Debug.LogError("Slots weight total is not 1");
+        }
+        return slotWeigths;
+    }
 
 }
