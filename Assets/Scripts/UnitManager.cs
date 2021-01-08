@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using UnityEngine;
 
 public class UnitManager : MonoBehaviour
@@ -15,7 +13,8 @@ public class UnitManager : MonoBehaviour
     public int TotNumberOfCovidExit { get; set; }
     public int CurrentNumberOfCovid { get; set; }
     public int CurrentNumberOfStudents { get; set; }
-    public int CurrentSlotNumber { get; set; }
+    // initial value of current slot number is -1 because in the program is 0-based and the GUI it will be 0
+    public int CurrentSlotNumber { get; private set; } = -1;
     public int TimeSlotDurationS { get; private set; }
     public float ProbabilityOfInfection { get; private set; }
     public float ProbabilityOfInfectionWithMask { get; private set; }
@@ -24,10 +23,11 @@ public class UnitManager : MonoBehaviour
     public float ProbabilityOfInfectionWait { get; private set; }
     public float ProbabilityOfInfectionWithMaskWait { get; private set; }
     public float InfectionDistanceWait { get; private set; }
-    public float DelayPercentageTimeSlot { get; private set; }
+    public int MaxDelayS { get; private set; }
     public bool UseCache { get; private set; }
-    public int NumEntitiesToSpawn { get; private set; }
-    private int MaxSlotsInSingleDay { get; set; }
+    public int TotalStudentsAcrossDay { get; private set; }
+    public int InitialDelayTillFirstSlotS { get; private set; }
+    public float TimeSinceFirstSlot { get; private set; }
 
     public int Speed { get; private set; } = 25;
 
@@ -38,18 +38,14 @@ public class UnitManager : MonoBehaviour
     public Material covidWaitMaterial;
     public Mesh unitMesh;
 
-    private int startTimeSeconds;
+    private float maxDelayPercentageTimeSlot;
+    private int slotsInDay;
+    private int firstSlotStartOffsetVis;
     private float percentageOfInfected;
     private float percentageOfCurrentInfected;
     private int totalNumberOfStudents;
     private int totalNumberOfCovid;
-    private int boxHeight;
-    private int boxWidth;
-    private int padding;
-    private int boxXPosition;
-    private int boxYPosition;
     private int secondsInRealLife;
-
 
     private void Awake()
     {
@@ -74,16 +70,16 @@ public class UnitManager : MonoBehaviour
         MaxPathNodePoolSize = 1024;
         MaxIterations = 1024;
         //values read from config file
-        Dictionary<string, string> configValues = GetConfigValues();
+        Dictionary<string, string> configValues = Utils.GetConfigValues();
 
         string tempStartTime = configValues["START_TIME_REAL_LIFE"];
 
         int startTimeH = int.Parse(tempStartTime.Split(':')[0]);
         int startTimeM = int.Parse(tempStartTime.Split(':')[1]);
-        startTimeSeconds = (startTimeH * 60 + startTimeM) * 60;
+        firstSlotStartOffsetVis = (startTimeH * 60 + startTimeM) * 60;
 
-        MaxSlotsInSingleDay = int.Parse(configValues["MAX_SLOTS_IN_SINGLE_DAY"]);
-        NumEntitiesToSpawn = int.Parse(configValues["NUM_ENTITIES_TO_SPAWN"]);
+        slotsInDay = int.Parse(configValues["SLOTS_IN_DAY"]);
+        TotalStudentsAcrossDay = int.Parse(configValues["TOTAL_STUDENTS_ACROSS_DAY"]);
         TimeSlotDurationS = int.Parse(configValues["SLOT_DURATION_REAL_LIFE_MINUTES"]);
         Time.timeScale = float.Parse(configValues["TIME_SCALE"], CultureInfo.InvariantCulture.NumberFormat);
         ProbabilityOfInfection = float.Parse(configValues["PROBABILITY_OF_INFECTION"], CultureInfo.InvariantCulture.NumberFormat);
@@ -93,87 +89,113 @@ public class UnitManager : MonoBehaviour
         ProbabilityOfInfectionWait = float.Parse(configValues["PROBABILITY_OF_INFECTION_WAIT"], CultureInfo.InvariantCulture.NumberFormat);
         ProbabilityOfInfectionWithMaskWait = float.Parse(configValues["PROBABILITY_OF_INFECTION_WITH_MASK_WAIT"], CultureInfo.InvariantCulture.NumberFormat);
         InfectionDistanceWait = float.Parse(configValues["INFECTION_DISTANCE_WAIT"], CultureInfo.InvariantCulture.NumberFormat);
-        DelayPercentageTimeSlot = float.Parse(configValues["DELAY_PERCENTAGE_TIMESLOT"], CultureInfo.InvariantCulture.NumberFormat);
+        maxDelayPercentageTimeSlot = float.Parse(configValues["MAX_DELAY_PERCENTAGE_TIMESLOT"], CultureInfo.InvariantCulture.NumberFormat);
+        MaxDelayS = (int)(TimeSlotDurationS * maxDelayPercentageTimeSlot);
         UseCache = configValues["USE_CACHE"] == "true";
+        // set the initial delay till first slot start to 2 times the maximum possible delay of a student in a sim
+        InitialDelayTillFirstSlotS = (int)(maxDelayPercentageTimeSlot * TimeSlotDurationS * 2);
+        Debug.Log("Unit manager config parsed");
     }
 
-    public static Dictionary<string, string> GetConfigValues()
-    {
-        Dictionary<string, string> configValues = new Dictionary<string, string>();
-
-        try
-        {
-            using (StreamReader sr = new StreamReader("./config.txt"))
-            {
-                string line;
-                while ((line = sr.ReadLine()) != null)
-                {
-                    configValues.Add(line.Split('=')[0], line.Split('=')[1]);
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.LogError(e.Message);
-        }
-        if (configValues.Count != 14)
-            Debug.LogError("Wrong format for Init.txt -> Not enough values");
-
-        return configValues;
-    }
 
     private void Update()
     {
-        secondsInRealLife = (int)(Time.time * 60) + startTimeSeconds;
+        // handle GUI time and current slot for entire sim (GUI and program)
+        TimeSinceFirstSlot = Time.time - InitialDelayTillFirstSlotS;
+        if (TimeSinceFirstSlot > 0)
+        {
+            CurrentSlotNumber = (int)TimeSinceFirstSlot / TimeSlotDurationS;
+        }
+        secondsInRealLife = (int)((TimeSinceFirstSlot) * 60) + firstSlotStartOffsetVis;
+
     }
 
     public void OnGUI()
     {
+        int padding;
+        int boxXPosition;
+        int boxHeight;
+        int boxWidth;
+        int boxYPosition;
+
+        boxXPosition = 5;
         padding = 2;
-        boxWidth = Screen.width / 4;
         boxHeight = Screen.height / 20;
+        boxWidth = Screen.width / 4;
+        GUI.skin.box.fontSize = boxWidth / 20;
+        GUI.skin.box.alignment = TextAnchor.MiddleLeft;
+        boxYPosition = 20;
+
+        // Time and slot info
+
 
         int hours = secondsInRealLife / 3600;
         int minutes = (secondsInRealLife % 3600) / 60;
 
-        boxXPosition = 5;
-        boxYPosition = Screen.height - 40;
-        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Probability of students with a mask : " + ProbabilityOfWearingMask * 100 + "%");
-        boxYPosition -= (boxHeight + padding);
-        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Risk of infection with mask : " + ProbabilityOfInfectionWithMask * 100 + "%");
-        boxYPosition -= (boxHeight + padding);
-        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Risk of infection : " + ProbabilityOfInfection * 100 + "%");
-        boxYPosition -= (boxHeight + padding);
-        if (CurrentSlotNumber <= 7)
-            GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot : " + CurrentSlotNumber + "/" + MaxSlotsInSingleDay);
-        else
-            GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot : end of the day ");
-        boxYPosition -= (boxHeight + padding);
         if (minutes < 10)
-            GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot(hour) : " + hours + " : 0" + minutes);
+            GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Time: " + hours + ":0" + minutes);
         else
-            GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot(hour) : " + hours + " : " + minutes);
-        
-        boxYPosition -= (boxHeight + padding);
+            GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Time: " + hours + ":" + minutes);
+        boxYPosition += (boxHeight + padding);
+        if (CurrentSlotNumber == -1)
+            GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot: " + "before lecture start");
+        else if (CurrentSlotNumber < slotsInDay)
+            GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot: " + (CurrentSlotNumber + 1) + "/" + slotsInDay);
+        else
+            GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Current timeslot: end of the day ");
+
+
+
+
+        // Config info
+        boxYPosition += (boxHeight + padding);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Probability of students with a mask: " + ProbabilityOfWearingMask * 100 + "%");
+        boxYPosition += (boxHeight + padding);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Risk of infection with mask: " + ProbabilityOfInfectionWithMask * 100 + "%");
+        boxYPosition += (boxHeight + padding);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Risk of infection: " + ProbabilityOfInfection * 100 + "%");
+
+
+        // General info
+        boxYPosition = Screen.height - 40;
+
         percentageOfCurrentInfected = CurrentNumberOfStudents == 0 ? 0 : (CurrentNumberOfCovid * 100 / CurrentNumberOfStudents);
-        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Percentage of exposed students : " + percentageOfCurrentInfected + "%");
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Exposed students inside now: " + percentageOfCurrentInfected + "%");
         boxYPosition -= (boxHeight + padding);
-        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Exposed to COVID-19: " + CurrentNumberOfCovid);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Exposed to Covid-19 inside now: " + CurrentNumberOfCovid);
         boxYPosition -= (boxHeight + padding);
-        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Students inside POLITO : " + CurrentNumberOfStudents);
-        
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Students in PoliTO inside now: " + CurrentNumberOfStudents);
+
+        boxYPosition -= (boxHeight + padding);
         boxYPosition -= (boxHeight + padding);
         totalNumberOfStudents = CurrentNumberOfStudents + TotNumberOfStudentsExit;
         totalNumberOfCovid = CurrentNumberOfCovid + TotNumberOfCovidExit;
         percentageOfInfected = totalNumberOfStudents == 0 ? 0 : (totalNumberOfCovid * 100 / totalNumberOfStudents);
-        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Percentage of exposed students : " + percentageOfInfected + "%");
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Exposed students up to now: " + percentageOfInfected + "%");
         boxYPosition -= (boxHeight + padding);
-        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Exposed to COVID-19: " + totalNumberOfCovid);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Exposed to Covid-19 up to now: " + totalNumberOfCovid);
         boxYPosition -= (boxHeight + padding);
-        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Students inside POLITO : " + totalNumberOfStudents);
+        GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Students in PoliTO up to now: " + totalNumberOfStudents);
 
+        if (CurrentNumberOfStudents == 0 && CurrentSlotNumber >= slotsInDay)
+        {
+            bool quitGame = GUI.Button(new Rect(Screen.width / 2 - 100, Screen.height - 200, 200, 20), "Day ended, click to quit");
+            if (quitGame)
+                Application.Quit();
+        }
 
-        GUI.skin.box.fontSize = boxWidth / 20;
     }
+
+
+    public int GetCloseTimeSlot()
+    {
+        // if currentTime is in delay range before the nextTimeSlot return the next time slot
+        if (TimeSinceFirstSlot > (CurrentSlotNumber + 1) * TimeSlotDurationS - MaxDelayS)
+        {
+            return CurrentSlotNumber + 1;
+        }
+        return CurrentSlotNumber;
+    }
+
 
 }

@@ -16,9 +16,9 @@ public class WaitSystem : SystemBase
         var ecb = bi_ECB.CreateCommandBuffer().AsParallelWriter();
         var randomArray = World.GetExistingSystem<RandomSystem>().RandomArray;
 
-        float elapsedTime = (float)Time.ElapsedTime;
+        float elapsedTime = UnitManager.Instance.TimeSinceFirstSlot;
         int timeSlotDurationS = UnitManager.Instance.TimeSlotDurationS;
-        float delayVariance = timeSlotDurationS * UnitManager.Instance.DelayPercentageTimeSlot;
+        float delayVariance = UnitManager.Instance.MaxDelayS;
         float halfDelayVariance = delayVariance / 2;
 
         Entities
@@ -31,7 +31,7 @@ public class WaitSystem : SystemBase
                 if (wc.waitEndTime == 0)
                 {
                     // stop waiting when the next slot starts
-                    wc.waitEndTime = timeSlotDurationS * ((UnitManager.Instance.CurrentSlotNumber - 1) + wc.slotsToWait) + (random.NextFloat(delayVariance) - halfDelayVariance);
+                    wc.waitEndTime = timeSlotDurationS * (UnitManager.Instance.GetCloseTimeSlot() + wc.slotsToWait) + (random.NextFloat(delayVariance) - halfDelayVariance);
                 }
                 else if (elapsedTime > wc.waitEndTime)
                 {

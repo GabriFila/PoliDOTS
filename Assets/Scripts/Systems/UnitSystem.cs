@@ -9,8 +9,6 @@ using Unity.Transforms;
 using UnityEngine.AI;
 using UnityEngine.Experimental.AI;
 
-using UnityEngine;
-
 public class UnitSystem : SystemBase
 {
     private NavMeshQuery query;
@@ -283,8 +281,6 @@ public class UnitSystem : SystemBase
                                 pc.hasCovid = true;
                                 break;
                             }
-                            else
-                                Debug.Log("Contagion Percentage Value: " + contagionPercentageValue + ", Covid Percentage: " + covidPercentage);
                         }
                 }
 
