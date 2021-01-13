@@ -184,7 +184,9 @@ public class UnitInitializerSystem : SystemBase
                         };
 
                         if (hasCovid)
+                        {
                             unitMaterial = UnitManager.Instance.covidMoveMaterial;
+                        }
 
                         ecb.AddSharedComponent(e, new RenderMesh
                         {
