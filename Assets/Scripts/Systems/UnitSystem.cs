@@ -8,7 +8,6 @@ using Unity.Rendering;
 using Unity.Transforms;
 using UnityEngine.AI;
 using UnityEngine.Experimental.AI;
-
 public class UnitSystem : SystemBase
 {
     private NavMeshQuery query;
@@ -21,23 +20,40 @@ public class UnitSystem : SystemBase
     private NavMeshWorld navMeshWorld;
     private List<JobHandle> jobHandles;
     private List<string> keys;
+
     private int totalNumberOfStudents;
     private int totalNumberOfCovid;
     private int totalCurrentNumberOfStudents;
-    private int totalCurrentNumberOfCovid;
+    private int totalCurrentNumberOfStudentsCovid;
     private int totalNumberOfStudentsExit;
     private int totalNumberOfCovidExit;
+
+    private float probabilityOfInfectionWithMaskWait;
+    private float probabilityOfInfectionWait;
+    private float probabilityOfInfectionWithMask;
+    private float probabilityOfInfection;
+    private float infectionDistance;
+    private float infectionDistanceWait;
+    private int frameCounter;
 
     BeginInitializationEntityCommandBufferSystem bi_ECB;
 
     //---------------------- Collision Avoidance ---------------------------
 
-    public static NativeMultiHashMap<int, float3> cellVsEntityPositions;
+    public static NativeMultiHashMap<int, CovidPos> cellVsEntityPositions;
 
     //---------------------- Collision Avoidance ---------------------------
 
     protected override void OnCreate()
     {
+        Dictionary<string, string> configValues = Utils.GetConfigValues();
+        probabilityOfInfectionWithMaskWait = float.Parse(configValues["PROBABILITY_OF_INFECTION_WITH_MASK_WAIT"]) * 100;
+        probabilityOfInfectionWait = float.Parse(configValues["PROBABILITY_OF_INFECTION_WAIT"]) * 100;
+        probabilityOfInfectionWithMask = float.Parse(configValues["PROBABILITY_OF_INFECTION_WITH_MASK"]) * 100;
+        probabilityOfInfection = float.Parse(configValues["PROBABILITY_OF_INFECTION"]) * 100;
+        infectionDistance = float.Parse(configValues["INFECTION_DISTANCE"]);
+        infectionDistanceWait = float.Parse(configValues["INFECTION_DISTANCE_WAIT"]);
+
         bi_ECB = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
 
         extents = new float3(100, 100, 100);
@@ -51,6 +67,7 @@ public class UnitSystem : SystemBase
 
         totalNumberOfCovidExit = 0;
         totalNumberOfStudentsExit = 0;
+        frameCounter = 0;
 
         for (int n = 0; n <= 4000; n++) //limit number equals to Max Entities routed per frame of UnitManager game object
         {
@@ -64,7 +81,7 @@ public class UnitSystem : SystemBase
 
         //---------------------- Collision Avoidance ---------------------------
 
-        cellVsEntityPositions = new NativeMultiHashMap<int, float3>(0, Allocator.Persistent);
+        cellVsEntityPositions = new NativeMultiHashMap<int, CovidPos>(0, Allocator.Persistent);
 
         //---------------------- Collision Avoidance ---------------------------
     }
@@ -79,28 +96,30 @@ public class UnitSystem : SystemBase
 
     protected override void OnUpdate()
     {
+        float innerProbabilityOfInfectionWithMaskWait = probabilityOfInfectionWithMaskWait;
+        float innerProbabilityOfInfectionWait = probabilityOfInfectionWait;
+        float innerProbabilityOfInfectionWithMask = probabilityOfInfectionWithMask;
+        float innerProbabilityOfInfection = probabilityOfInfection;
+        float innerInfectionDistance = infectionDistance;
+        float innerInfectionDistanceWait = infectionDistanceWait;
+        frameCounter++;
+
         totalCurrentNumberOfStudents = 0;
-        totalCurrentNumberOfCovid = 0;
-        List<float3> covidPositions = new List<float3>();
+        totalCurrentNumberOfStudentsCovid = 0;
 
         float deltaTime = Time.DeltaTime;
 
         var ecb = bi_ECB.CreateCommandBuffer();
+        var ecbParallel = bi_ECB.CreateCommandBuffer().AsParallelWriter();
+        var randomArray = World.GetExistingSystem<RandomSystem>().RandomArray;
         int i = 0, counter = 0;
 
         Entities.
-            //WithNone<WaitComponent>().
+            WithNone<WaitComponent>().
             WithoutBurst().
             WithStructuralChanges().
             ForEach((Entity e, ref UnitComponent uc, ref DynamicBuffer<UnitBuffer> ub, ref Translation trans, ref PersonComponent pc) =>
             {
-                totalCurrentNumberOfStudents++;
-
-                if (pc.hasCovid)
-                {
-                    covidPositions.Add(trans.Value);
-                    totalCurrentNumberOfCovid++;
-                }
 
                 if (i <= UnitManager.Instance.MaxEntitiesRoutedPerFrame)
                 {
@@ -116,7 +135,7 @@ public class UnitSystem : SystemBase
                         }
                         uc.routed = true;
                         uc.usingCachedPath = true;
-                        EntityManager.AddComponent<UnitRouted>(e);
+                        EntityManager.AddComponent<UnitRoutedComponent>(e);
                         return;
                     }
                     //Job
@@ -183,7 +202,7 @@ public class UnitSystem : SystemBase
                 UnitComponent uc = EntityManager.GetComponentData<UnitComponent>(routedEntities[j]);
                 uc.routed = true;
                 EntityManager.SetComponentData<UnitComponent>(routedEntities[j], uc);
-                EntityManager.AddComponent<UnitRouted>(routedEntities[j]);
+                EntityManager.AddComponent<UnitRoutedComponent>(routedEntities[j]);
             }
             queries[j].Dispose();
             j++;
@@ -202,96 +221,194 @@ public class UnitSystem : SystemBase
             cellVsEntityPositions.Capacity = eq.CalculateEntityCount();
         }
 
-        NativeMultiHashMap<int, float3>.ParallelWriter cellVsEntityPositionsParallel = cellVsEntityPositions.AsParallelWriter();
+        NativeMultiHashMap<int, CovidPos>.ParallelWriter cellVsEntityPositionsParallel = cellVsEntityPositions.AsParallelWriter();
         Entities
             .WithNone<WaitComponent>()
             .WithBurst(synchronousCompilation: true)
-            .ForEach((ref UnitComponent uc, ref Translation trans) =>
+            .ForEach((ref UnitComponent uc, ref Translation trans, ref PersonComponent pc) =>
             {
-                cellVsEntityPositionsParallel.Add(GetUniqueKeyForPosition(trans.Value, 15), trans.Value);
+                cellVsEntityPositionsParallel.Add(GetUniqueKeyForPosition(trans.Value, 5), new CovidPos { pos = trans.Value, hasCovid = pc.hasCovid });
             }).ScheduleParallel();
 
 
-        NativeMultiHashMap<int, float3> cellVsEntityPositionsForJob = cellVsEntityPositions;
+
+        NativeMultiHashMap<int, CovidPos> cellVsEntityPositionsForJob = cellVsEntityPositions;
         Entities
             .WithNone<WaitComponent>()
             .WithBurst(synchronousCompilation: true)
             .WithReadOnly(cellVsEntityPositionsForJob)
-            .ForEach((ref UnitComponent uc, ref Translation trans) =>
+            .WithNativeDisableParallelForRestriction(randomArray)
+            .ForEach((Entity e, int entityInQueryIndex, int nativeThreadIndex, ref UnitComponent uc, ref Translation trans, ref PersonComponent pc) =>
             {
-                int key = GetUniqueKeyForPosition(trans.Value, 15);
+                var random = randomArray[nativeThreadIndex];
+                int key = GetUniqueKeyForPosition(trans.Value, 5);
                 NativeMultiHashMapIterator<int> nmhKeyIterator;
-                float3 currentLocationToCheck;
+                CovidPos otherEntityData;
+                float3 otherEntityPos;
+                bool otherEntityHasCovid;
                 float currentDistance = 0.3f;
-                int total = 0;
                 uc.avoidanceDirection = float3.zero;
-                if (cellVsEntityPositionsForJob.TryGetFirstValue(key, out currentLocationToCheck, out nmhKeyIterator))
+                int total = 0;
+                int totalInCell = 0;
+
+                if (cellVsEntityPositionsForJob.TryGetFirstValue(key, out otherEntityData, out nmhKeyIterator))
                 {
+                    otherEntityPos = otherEntityData.pos;
+                    otherEntityHasCovid = otherEntityData.hasCovid;
+
                     do
                     {
-                        if (!trans.Value.Equals(currentLocationToCheck))
+                        if (!trans.Value.Equals(otherEntityPos))
                         {
-                            if (currentDistance > math.sqrt(math.lengthsq(trans.Value - currentLocationToCheck)))
+                            totalInCell++;
+
+                            if (currentDistance > math.sqrt(math.lengthsq(trans.Value - otherEntityPos)))
                             {
-                                currentDistance = math.sqrt(math.lengthsq(trans.Value - currentLocationToCheck));
-                                float3 distanceFromTo = trans.Value - currentLocationToCheck;
+                                currentDistance = math.sqrt(math.lengthsq(trans.Value - otherEntityPos));
+                                float3 distanceFromTo = trans.Value - otherEntityPos;
                                 uc.avoidanceDirection = math.normalize(distanceFromTo / currentDistance);
                                 total++;
                             }
                         }
-                    } while (cellVsEntityPositionsForJob.TryGetNextValue(out currentLocationToCheck, ref nmhKeyIterator));
+                    } while (cellVsEntityPositionsForJob.TryGetNextValue(out otherEntityData, ref nmhKeyIterator) && totalInCell < 20);
                     if (total > 0)
                     {
-                        uc.avoidanceDirection = uc.avoidanceDirection / total;
+                        uc.avoidanceDirection /= total;
                     }
                 }
+                randomArray[nativeThreadIndex] = random;
             }).ScheduleParallel();
 
         //----------- Collision Avoidance Code -----------------
 
-        float contagionPercentageValue;
-        float covidPercentage;
+        cellVsEntityPositionsForJob = cellVsEntityPositions;
 
-        Entities
-            .WithoutBurst()
-            .WithAll<WaitComponent>().ForEach((Entity e, ref Translation trans, ref PersonComponent pc) =>
-            {
-                if (!pc.hasCovid)
+        if (frameCounter % 30 == 0)
+        {
+
+            Entities
+                .WithoutBurst()
+                .WithReadOnly(cellVsEntityPositionsForJob)
+                .WithNativeDisableParallelForRestriction(randomArray)
+                .WithNone<WaitComponent>()
+                .ForEach((Entity e, int entityInQueryIndex, int nativeThreadIndex, ref UnitComponent uc, ref Translation trans, ref PersonComponent pc) =>
                 {
-                    foreach (float3 pos in covidPositions)
-                        if (math.abs(pos.x - trans.Value.x) < UnitManager.Instance.InfectionDistanceWait && math.abs(pos.z - trans.Value.z) < UnitManager.Instance.InfectionDistance)
+                    if (!pc.hasCovid)
+                    {
+
+                        var random = randomArray[nativeThreadIndex];
+                        int key = GetUniqueKeyForPosition(trans.Value, 5);
+                        NativeMultiHashMapIterator<int> nmhKeyIterator;
+                        CovidPos otherEntityData;
+                        float3 otherEntityPos;
+                        bool otherEntityHasCovid;
+                        float contagionPercentageValue = 0;
+                        float covidPercentage = 0;
+                        //int totalInCell = 0;
+                        if (cellVsEntityPositionsForJob.TryGetFirstValue(key, out otherEntityData, out nmhKeyIterator))
                         {
-                            contagionPercentageValue = UnityEngine.Random.Range(0, 100);
+                            otherEntityPos = otherEntityData.pos;
+                            otherEntityHasCovid = otherEntityData.hasCovid;
 
-                            if (pc.wearMask)
-                                covidPercentage = UnitManager.Instance.ProbabilityOfInfectionWithMaskWait * 100;
-                            else
-                                covidPercentage = UnitManager.Instance.ProbabilityOfInfectionWait * 100;
-
-                            if (contagionPercentageValue <= covidPercentage)
+                            do
                             {
-                                totalCurrentNumberOfCovid++;
-
-                                ecb.SetSharedComponent(e, new RenderMesh
+                                if (!trans.Value.Equals(otherEntityPos))
                                 {
-                                    mesh = UnitManager.Instance.unitMesh,
-                                    material = UnitManager.Instance.covidMoveMaterial
-                                });
 
-                                pc.hasCovid = true;
-                                break;
-                            }
+                                    if (otherEntityHasCovid && math.abs(otherEntityPos.x - trans.Value.x) < innerInfectionDistanceWait && math.abs(otherEntityPos.z - trans.Value.z) < innerInfectionDistanceWait)
+                                    {
+                                        contagionPercentageValue = random.NextInt(0, 100);
+
+                                        if (pc.wearMask)
+                                            covidPercentage = innerProbabilityOfInfectionWithMask;
+                                        else
+                                            covidPercentage = innerProbabilityOfInfection;
+
+                                        if (contagionPercentageValue <= covidPercentage)
+                                        {
+                                            pc.hasCovid = true;
+
+                                            ecbParallel.SetSharedComponent(entityInQueryIndex, e, new RenderMesh
+                                            {
+                                                mesh = UnitManager.Instance.unitMesh,
+                                                material = UnitManager.Instance.covidMoveMaterial
+                                            });
+
+                                            break;
+                                        }
+                                    }
+                                }
+                            } while (cellVsEntityPositionsForJob.TryGetNextValue(out otherEntityData, ref nmhKeyIterator));
                         }
-                }
+                        randomArray[nativeThreadIndex] = random;
+                    }
+                }).ScheduleParallel();
 
-            }).Run();
+            Entities
+                .WithoutBurst()
+                .WithReadOnly(cellVsEntityPositionsForJob)
+                .WithNativeDisableParallelForRestriction(randomArray)
+                .WithAll<WaitComponent>().ForEach((Entity e, int entityInQueryIndex, int nativeThreadIndex, ref UnitComponent uc, ref Translation trans, ref PersonComponent pc) =>
+                {
+                    if (!pc.hasCovid)
+                    {
+                        var random = randomArray[nativeThreadIndex];
+                        int key = GetUniqueKeyForPosition(trans.Value, 5);
+                        NativeMultiHashMapIterator<int> nmhKeyIterator;
+                        CovidPos otherEntityData;
+                        float3 otherEntityPos;
+                        bool otherEntityHasCovid;
+                        float contagionPercentageValue = 0;
+                        float covidPercentage = 0;
+                        int totalInCell = 0;
+
+                        if (cellVsEntityPositionsForJob.TryGetFirstValue(key, out otherEntityData, out nmhKeyIterator))
+                        {
+                            otherEntityPos = otherEntityData.pos;
+                            otherEntityHasCovid = otherEntityData.hasCovid;
+
+                            do
+                            {
+                                if (!trans.Value.Equals(otherEntityPos))
+                                {
+                                    totalInCell++;
+
+                                    if (otherEntityHasCovid && math.abs(otherEntityPos.x - trans.Value.x) < innerInfectionDistanceWait || math.abs(otherEntityPos.z - trans.Value.z) < innerInfectionDistanceWait)
+                                    {
+                                        contagionPercentageValue = random.NextInt(0, 100);
+
+                                        if (pc.wearMask)
+                                            covidPercentage = innerProbabilityOfInfectionWithMaskWait;
+                                        else
+                                            covidPercentage = innerProbabilityOfInfectionWait;
+
+                                        if (contagionPercentageValue <= covidPercentage)
+                                        {
+                                            pc.hasCovid = true;
+
+                                            ecbParallel.SetSharedComponent(entityInQueryIndex, e, new RenderMesh
+                                            {
+                                                mesh = UnitManager.Instance.unitMesh,
+                                                material = UnitManager.Instance.covidWaitMaterial
+                                            });
+
+                                            break;
+                                        }
+                                    }
+                                }
+                            } while (cellVsEntityPositionsForJob.TryGetNextValue(out otherEntityData, ref nmhKeyIterator) && totalInCell < 30);
+                        }
+                        randomArray[nativeThreadIndex] = random;
+                    }
+                }).ScheduleParallel();
+        }
 
 
         //Movement
         Entities
            .WithoutBurst()
            .WithNone<WaitComponent>()
-           .WithAll<UnitRouted>().ForEach((Entity e, int entityInQueryIndex, ref UnitComponent uc, ref DynamicBuffer<UnitBuffer> ub, ref DynamicBuffer<ScheduleBuffer> sb, ref Translation trans, ref PersonComponent pc, in RenderMesh rm) =>
+           .WithAll<UnitRoutedComponent>().ForEach((Entity e, int entityInQueryIndex, ref UnitComponent uc, ref DynamicBuffer<UnitBuffer> ub, ref DynamicBuffer<ScheduleBuffer> sb, ref Translation trans, ref PersonComponent pc, in RenderMesh rm) =>
            {
                UnityEngine.AI.NavMeshHit outResult;
                Translation newTrans = trans;
@@ -309,34 +426,6 @@ public class UnitSystem : SystemBase
                    if (!UnityEngine.AI.NavMesh.SamplePosition(newTrans.Value, out outResult, 0.8f, NavMesh.AllAreas))
                    {
                        uc.waypointDirection -= uc.avoidanceDirection;
-                   }
-
-                   if (!pc.hasCovid)
-                   {
-                       foreach (float3 pos in covidPositions)
-                           if (math.abs(pos.x - trans.Value.x) < UnitManager.Instance.InfectionDistance && math.abs(pos.z - trans.Value.z) < UnitManager.Instance.InfectionDistance)
-                           {
-                               contagionPercentageValue = UnityEngine.Random.Range(0, 100);
-
-                               if (pc.wearMask)
-                                   covidPercentage = UnitManager.Instance.ProbabilityOfInfectionWithMask * 100;
-                               else
-                                   covidPercentage = UnitManager.Instance.ProbabilityOfInfection * 100;
-
-                               if (contagionPercentageValue <= covidPercentage)
-                               {
-                                   totalCurrentNumberOfCovid++;
-
-                                   ecb.SetSharedComponent(e, new RenderMesh
-                                   {
-                                       mesh = UnitManager.Instance.unitMesh,
-                                       material = UnitManager.Instance.covidMoveMaterial
-                                   });
-
-                                   pc.hasCovid = true;
-                               }
-                               break;
-                           }
                    }
 
                    trans.Value += uc.waypointDirection * uc.speed * deltaTime;
@@ -360,7 +449,7 @@ public class UnitSystem : SystemBase
                            uc.usingCachedPath = false;
                            uc.currentBufferIndex = 0;
                            ub.Clear();
-                           ecb.RemoveComponent<UnitRouted>(e);
+                           ecb.RemoveComponent<UnitRoutedComponent>(e);
                            ecb.AddComponent(e, new WaitComponent
                            {
                                slotsToWait = sb[uc.count - 1].duration,
@@ -377,23 +466,32 @@ public class UnitSystem : SystemBase
                        else if (uc.count == sb.Length - 1)
                        {
                            ecb.DestroyEntity(e);
-                           totalCurrentNumberOfStudents--;
-                           totalNumberOfStudentsExit++;
 
+                           totalNumberOfStudentsExit++;
                            if (pc.hasCovid)
-                           {
-                               totalCurrentNumberOfCovid--;
                                totalNumberOfCovidExit++;
-                           }
                        }
+
                    }
                }
            }).Run();
 
+        Entities.
+            WithoutBurst().
+            ForEach((PersonComponent pc) =>
+            {
+                totalCurrentNumberOfStudents++;
+
+                if (pc.hasCovid)
+                {
+                    totalCurrentNumberOfStudentsCovid++;
+                }
+            }).Run();
+
         UnitManager.Instance.TotNumberOfStudentsExit = totalNumberOfStudentsExit;
         UnitManager.Instance.TotNumberOfCovidExit = totalNumberOfCovidExit;
         UnitManager.Instance.CurrentNumberOfStudents = totalCurrentNumberOfStudents;
-        UnitManager.Instance.CurrentNumberOfCovid = totalCurrentNumberOfCovid;
+        UnitManager.Instance.CurrentNumberOfCovid = totalCurrentNumberOfStudentsCovid;
     }
 
     protected override void OnDestroy()
@@ -477,4 +575,10 @@ public class UnitSystem : SystemBase
     }
 }
 
-public struct UnitRouted : IComponentData { }
+public struct UnitRoutedComponent : IComponentData { }
+
+public struct CovidPos
+{
+    public float3 pos;
+    public bool hasCovid;
+}

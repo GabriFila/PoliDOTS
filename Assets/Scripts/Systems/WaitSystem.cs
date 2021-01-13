@@ -24,6 +24,7 @@ public class WaitSystem : SystemBase
         Entities
             .WithoutBurst()
             .WithNativeDisableParallelForRestriction(randomArray)
+            .WithAll<WaitComponent>()
             .ForEach((Entity e, int entityInQueryIndex, int nativeThreadIndex, ref WaitComponent wc, ref PersonComponent pc) =>
             {
                 var random = randomArray[nativeThreadIndex];

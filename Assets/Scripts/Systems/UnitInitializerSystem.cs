@@ -48,14 +48,13 @@ public class UnitInitializerSystem : SystemBase
                 finalTimeSlot = lectureStartTimeSlot;
             courses.Add(new Course(i, $"Course-{i}", lectures, lectureStartTimeSlot));
         }
-
         availableCourseIDsPerSlot = new List<List<int>>();
         for (int slotIdx = 0; slotIdx < slotsInDay; slotIdx++)
         {
             availableCourseIDsPerSlot.Add(new List<int>());
             for (int courseIdx = 0; courseIdx < courses.Count; courseIdx++)
             {
-                if (courses[courseIdx].LectureStart == slotIdx + 1)
+                if (courses[courseIdx].LectureStart == slotIdx)
                 {
                     availableCourseIDsPerSlot[slotIdx].Add(courses[courseIdx].Id);
                 }
@@ -80,23 +79,22 @@ public class UnitInitializerSystem : SystemBase
 
         // need to wait one second after each generation because at the moment the distribution of the units
         // among the delay before/after the start of a time slot ahs a resolution of one sec
-        if (elapsedTime > 0.05 && currentTimeSlot < finalTimeSlot)
+        if (elapsedTime > 0.05 && currentTimeSlot <= finalTimeSlot)
         {
             elapsedTime = 0;
 
-            int slotDurationS = UnitManager.Instance.TimeSlotDurationS;
-            int maxDelayS = UnitManager.Instance.MaxDelayS;
-
             int currentCloseTimeSlot = UnitManager.Instance.GetCloseTimeSlot();
             // when the sim enters the delay range for the before the next time slot
-            if (currentCloseTimeSlot >= 0)
-                unitsToSpawn = timeSlotSpawners[currentCloseTimeSlot].GetUnitsToSpawnNow();
-            if (currentCloseTimeSlot > prevCloseTimeSlot)
+            if (currentCloseTimeSlot >= 0 && currentCloseTimeSlot <= finalTimeSlot)
             {
-                // update prevNeighbour to avoid reenter next frame
-                prevCloseTimeSlot = currentCloseTimeSlot;
-                // compute courses for next slots
-                availableCourseIDsInCurrentSlot = availableCourseIDsPerSlot[currentCloseTimeSlot];
+                unitsToSpawn = timeSlotSpawners[currentCloseTimeSlot].GetUnitsToSpawnNow();
+                if (currentCloseTimeSlot > prevCloseTimeSlot)
+                {
+                    // update prevNeighbour to avoid reenter next frame
+                    prevCloseTimeSlot = currentCloseTimeSlot;
+                    // compute courses for next slots
+                    availableCourseIDsInCurrentSlot = availableCourseIDsPerSlot[currentCloseTimeSlot];
+                }
             }
 
         }
@@ -184,7 +182,9 @@ public class UnitInitializerSystem : SystemBase
                         };
 
                         if (hasCovid)
+                        {
                             unitMaterial = UnitManager.Instance.covidMoveMaterial;
+                        }
 
                         ecb.AddSharedComponent(e, new RenderMesh
                         {
