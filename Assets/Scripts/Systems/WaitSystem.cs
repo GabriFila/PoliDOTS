@@ -39,10 +39,11 @@ public class WaitSystem : SystemBase
 
                     Material unitMaterial;
 
-                    if (pc.hasCovid)
-                        unitMaterial = UnitManager.Instance.covidMoveMaterial;
-                    else
-                        unitMaterial = UnitManager.Instance.healthyMoveMaterial;
+                    unitMaterial = UnitManager.Instance.healthyMoveMaterial;
+                    //if (pc.hasCovid)  
+                    //    unitMaterial = UnitManager.Instance.covidMoveMaterial;
+                    //else
+                    //    unitMaterial = UnitManager.Instance.healthyMoveMaterial;
 
                     ecb.SetSharedComponent(entityInQueryIndex, e, new RenderMesh
                     {

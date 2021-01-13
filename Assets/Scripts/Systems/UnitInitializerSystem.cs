@@ -104,24 +104,24 @@ public class UnitInitializerSystem : SystemBase
         //spawn units when sim starts and every if another slot has passed and there are still some courses beginning in a later slot i enter the lambda
         if (unitsToSpawn > 0 && availableCourseIDsInCurrentSlot.Count > 0)
         {
+            UnitManager.Instance.NumberOfStudentsUpToNow += unitsToSpawn;
             Entities
                 .WithoutBurst()
                 .ForEach((Entity e, int entityInQueryIndex, in UnitInitializerComponent uic, in LocalToWorld ltw) =>
                 {
                     for (int j = 0; j < unitsToSpawn; j++)
                     {
-                        Entity defEntity = ecb.Instantiate(uic.prefabToSpawn);
+                        Entity newEntity = ecb.Instantiate(uic.prefabToSpawn);
                         float3 position = new float3(UnityEngine.Random.Range(0, 36), uic.baseOffset, 0) + uic.currentPosition; //value 36 based on the spawner position (-28,0,-47)
-                        bool hasCovid = false;
                         bool wearMask = false;
                         Material unitMaterial = UnitManager.Instance.healthyMoveMaterial;
 
-                        ecb.SetComponent(defEntity, new Translation { Value = position });
-                        ecb.AddComponent<UnitComponent>(defEntity);
-                        ecb.AddComponent<PersonComponent>(defEntity);
-                        ecb.AddComponent<CourseComponent>(defEntity);
-                        ecb.AddBuffer<UnitBuffer>(defEntity);
-                        DynamicBuffer<ScheduleBuffer> sb = ecb.AddBuffer<ScheduleBuffer>(defEntity);
+                        ecb.SetComponent(newEntity, new Translation { Value = position });
+                        ecb.AddComponent<UnitComponent>(newEntity);
+                        ecb.AddComponent<PersonComponent>(newEntity);
+                        ecb.AddComponent<CourseComponent>(newEntity);
+                        ecb.AddBuffer<UnitBuffer>(newEntity);
+                        DynamicBuffer<ScheduleBuffer> sb = ecb.AddBuffer<ScheduleBuffer>(newEntity);
 
                         //select randomly a course from the available ones
                         int selectedCourseId = availableCourseIDsInCurrentSlot[Utils.GenerateInt(availableCourseIDsInCurrentSlot.Count)];
@@ -163,7 +163,8 @@ public class UnitInitializerSystem : SystemBase
                         if (!hasCovidAlreadySpawned) //only the first entity in the first slot has covid to simulate what can be the infection
                         {
                             hasCovidAlreadySpawned = true;
-                            hasCovid = true;
+                            ecb.AddComponent<HasCovidComponent>(newEntity);
+                            unitMaterial = UnitManager.Instance.covidMoveMaterial;
                         }
 
                         CourseComponent courseComponent = new CourseComponent
@@ -179,14 +180,10 @@ public class UnitInitializerSystem : SystemBase
                         {
                             age = Utils.GenerateInt(19, 30),
                             sex = Utils.GenerateSex(),
-                            hasCovid = hasCovid,
+                            //hasCovid = hasCovid,
                             wearMask = wearMask
                         };
 
-                        if (hasCovid)
-                        {
-                            unitMaterial = UnitManager.Instance.covidMoveMaterial;
-                        }
 
                         ecb.AddSharedComponent(e, new RenderMesh
                         {
@@ -194,9 +191,9 @@ public class UnitInitializerSystem : SystemBase
                             material = unitMaterial
                         });
 
-                        ecb.SetComponent(defEntity, uc);
-                        ecb.SetComponent(defEntity, courseComponent);
-                        ecb.SetComponent(defEntity, personComponent);
+                        ecb.SetComponent(newEntity, uc);
+                        ecb.SetComponent(newEntity, courseComponent);
+                        ecb.SetComponent(newEntity, personComponent);
                     }
                 }).Run();
         }

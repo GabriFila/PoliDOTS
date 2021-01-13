@@ -9,10 +9,9 @@ public class UnitManager : MonoBehaviour
     public int MaxEntitiesRoutedPerFrame { get; private set; }
     public int MaxPathNodePoolSize { get; private set; }
     public int MaxIterations { get; private set; }
-    public int TotNumberOfStudentsExit { get; set; }
-    public int TotNumberOfCovidExit { get; set; }
     public int CurrentNumberOfCovid { get; set; }
     public int CurrentNumberOfStudents { get; set; }
+    public int NumberOfStudentsUpToNow { get; set; }
     // initial value of current slot number is -1 because in the program is 0-based and the GUI it will be 0
     public int CurrentSlotNumber { get; private set; } = -1;
     public int TimeSlotDurationS { get; private set; }
@@ -168,8 +167,8 @@ public class UnitManager : MonoBehaviour
 
         boxYPosition -= (boxHeight + padding);
         boxYPosition -= (boxHeight + padding);
-        totalNumberOfStudents = CurrentNumberOfStudents + TotNumberOfStudentsExit;
-        totalNumberOfCovid = CurrentNumberOfCovid + TotNumberOfCovidExit;
+        totalNumberOfStudents = NumberOfStudentsUpToNow;
+        //totalNumberOfCovid = CurrentNumberOfCovid + TotNumberOfCovidExit;
         percentageOfInfected = totalNumberOfStudents == 0 ? 0 : (totalNumberOfCovid * 100 / totalNumberOfStudents);
         GUI.Box(new Rect(boxXPosition, boxYPosition, boxWidth, boxHeight), "Exposed students up to now: " + percentageOfInfected + "%");
         boxYPosition -= (boxHeight + padding);

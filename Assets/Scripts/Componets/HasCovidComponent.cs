@@ -1,2 +1,3 @@
-﻿
-//public struct HasCovidComponent : IComponentData { }
+﻿using Unity.Entities;
+
+public struct HasCovidComponent : IComponentData { }
